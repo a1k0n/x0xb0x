@@ -67,10 +67,10 @@ uint8_t no_keys_pressed(void);
 
 #define KEY_TEMPO 2
 
-#define KEY_STEP 8
+#define KEY_NEXT 8
 #define KEY_RS 1
-#define KEY_X 0
-#define KEY_RAND 3
+#define KEY_CHAIN 0
+#define KEY_PREV 3
 #define KEY_C 4
 #define KEY_CS 9
 #define KEY_D 5

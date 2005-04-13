@@ -131,7 +131,7 @@ void do_track_edit(void) {
       }
     }
     
-    if (just_pressed(KEY_STEP) && !in_run_mode) {
+    if (just_pressed(KEY_NEXT) && !in_run_mode) {
       note_off(0);  // if something -was- playing, kill it
 
       if (in_stepwrite_mode) {
@@ -216,7 +216,7 @@ void do_track_edit(void) {
     }
   
     if (in_stepwrite_mode) {
-      set_led(LED_STEP);                                         // show we're in this mode
+      set_led(LED_NEXT);                                         // show we're in this mode
       
       // handle RAS keypresses -> modifications to current pattern
       if (curr_patt != END_OF_TRACK) {
@@ -347,7 +347,7 @@ static void start_track_stepwrite_mode(void) {
 
 static void stop_track_stepwrite_mode(void) {
   in_stepwrite_mode = FALSE;
-  clear_led(LED_STEP);
+  clear_led(LED_NEXT);
   clear_all_leds();
   clear_blinking_leds();
 }

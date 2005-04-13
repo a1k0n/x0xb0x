@@ -70,10 +70,10 @@ void blink_leds_off(void);
 void clear_all_leds(void);
 void clear_blinking_leds(void);
 
-#define LED_STEP 36
+#define LED_NEXT 36
 #define LED_RS 33
-#define LED_X 34
-#define LED_RAND 35
+#define LED_CHAIN 34
+#define LED_PREV 35
 #define LED_C 32
 #define LED_CS 27
 #define LED_D 25

@@ -101,7 +101,7 @@ void do_pattern_edit(void) {
       set_led(LED_RS); 
 
     if (in_stepwrite_mode)
-      set_led(LED_STEP); 
+      set_led(LED_NEXT); 
 
 
     // if they pressed one of the 8 bottom buttons (location select)
@@ -120,13 +120,13 @@ void do_pattern_edit(void) {
     }
 
     // if they hit random, fill pattern buffer with random data
-    if (just_pressed(KEY_RAND) && in_runwrite_mode) {
-      set_led(LED_RAND);
+    if (just_pressed(KEY_CHAIN) && in_runwrite_mode) {
+      set_led(LED_CHAIN);
       for (i=0; i< PATT_SIZE; i++) {
 	pattern_buff[i] = random();
       }
-    } else if (just_released(KEY_RAND) && in_runwrite_mode) {
-      clear_led(LED_RAND);
+    } else if (just_released(KEY_CHAIN) && in_runwrite_mode) {
+      clear_led(LED_CHAIN);
     }
 
     
@@ -253,7 +253,7 @@ void do_pattern_edit(void) {
 
 
     // if in step mode & they press step, then step, otherwise start stepmode
-    if (just_pressed(KEY_STEP)) {
+    if (just_pressed(KEY_NEXT)) {
       if (in_stepwrite_mode) {
 	note_off(0);
 	delay_ms(1);
