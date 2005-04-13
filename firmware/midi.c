@@ -248,3 +248,14 @@ int midi_getchar(void) {
   return c;
 }
 
+// sends a midi stop and 'all notes off' message
+void midi_stop(void) {
+  // if we were generating midi, stop all notes and send a clockstop signal
+  if (sync != MIDI_SYNC) { 
+    midi_putchar(MIDI_STOP);
+    
+    midi_putchar((MIDI_CONTROLLER<<4) | midi_addr);
+    midi_putchar(MIDI_ALL_NOTES_OFF);
+    midi_putchar(0);
+  }
+}

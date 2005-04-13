@@ -40,6 +40,8 @@
 #include "eeprom.h"
 #include "synth.h"
 #include "delay.h"
+#include "dinsync.h"
+#include "midi.h"
 
 extern uint8_t function, bank;
 
@@ -76,10 +78,18 @@ void do_pattern_edit(void) {
   while (1) {
     if (function != EDIT_PATTERN_FUNC) {
       // oops i guess they want something else, return!
+      turn_off_tempo();
+      play_loaded_pattern = FALSE;
+
+      // turn off all sound & output signals
+      note_off(0);
+      dinsync_stop();
+      midi_stop();
+
+      // clear the LEDs
       clear_bank_leds();
       clear_key_leds();
       clock_leds();
-      turn_off_tempo();
       return;
     }
 

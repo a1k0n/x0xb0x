@@ -114,14 +114,16 @@ void do_pattern_play(void) {
     read_switches();
 
     if (function_changed) {
+      playing = 0;
+
+      dinsync_stop();
+      midi_stop();
+      curr_pitch_shift = next_pitch_shift = 0;
+      all_accent = all_rest = all_slide = 0;
+
       clear_all_leds();
       clear_blinking_leds();
       clock_leds();
-      playing = 0;
-      dinsync_stop();
-      midi_putchar(MIDI_STOP);
-      curr_pitch_shift = next_pitch_shift = 0;
-      all_accent = all_rest = all_slide = 0;
       return;
     }
 
@@ -328,7 +330,7 @@ void do_pattern_play(void) {
 	playing = 0;
 	play_loaded_pattern = 0;
 	note_off(0);
-	midi_putchar(MIDI_STOP);
+	midi_stop();
 	if (sync != DIN_SYNC) 
 	  dinsync_stop();
       }

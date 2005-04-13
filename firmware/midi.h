@@ -30,10 +30,18 @@
  *
  */
 
+#ifndef _MIDI_H_
+#define _MIDI_H_
+
+// midi channel messages
 #define MIDI_NOTE_ON 0x9
 #define MIDI_NOTE_OFF 0x8
 #define MIDI_PITCHBEND 0xE
+#define MIDI_CONTROLLER 0xB
 
+#define MIDI_ALL_NOTES_OFF 123
+
+// system messages
 #define MIDI_START 0xFA
 #define MIDI_CONTINUE 0xFB
 #define MIDI_STOP 0xFC
@@ -56,3 +64,7 @@ void midi_send_note_on(uint8_t note);
 void midi_send_note_off(uint8_t note);
 
 uint8_t midi_recv_cmd(void);
+
+void midi_stop(void);
+
+#endif

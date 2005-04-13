@@ -82,13 +82,22 @@ void do_track_edit(void) {
   while (1) {
     read_switches();
 
-    if (function != EDIT_TRACK_FUNC) {
       // oops i guess they want something else, return!
+    if (function != EDIT_TRACK_FUNC) {
+      // stop playing any notes
+      turn_off_tempo();
+      play_loaded_track = play_loaded_pattern = 0;
+
+      // turn off notes and midi/dinsync
       note_off(0);
+      dinsync_stop();
+      midi_stop();
+
+      // clear the LEDs
       clear_bank_leds();
       clear_key_leds();
       clock_leds();
-      turn_off_tempo();
+
       return;
     }
     
