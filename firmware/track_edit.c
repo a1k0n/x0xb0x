@@ -41,6 +41,9 @@
 #include "eeprom.h"
 #include "synth.h"
 #include "delay.h"
+#include "midi.h"
+#include "dinsync.h"
+
 
 extern uint8_t function, bank;
 
@@ -140,18 +143,30 @@ void do_track_edit(void) {
       }
     }
     
-    if (just_pressed(KEY_NEXT) && !in_run_mode) {
+    if ((just_pressed(KEY_NEXT) || just_pressed(KEY_PREV)) && !in_run_mode) {
       note_off(0);  // if something -was- playing, kill it
 
       if (in_stepwrite_mode) {
-	// step forward in the track
-	if (((curr_track_index+1) >= TRACK_SIZE) ||
-	    (track_buff[curr_track_index] == END_OF_TRACK))
-	  curr_track_index = 0;            // got to the end of the track, loop back to beginning
-	else
-	  curr_track_index++;
-      } else {
-	// starting stepwrite mdoe
+	if (just_pressed(KEY_NEXT)) {
+	  // step forward in the track
+	  if (((curr_track_index+1) >= TRACK_SIZE) ||
+	      (track_buff[curr_track_index] == END_OF_TRACK))
+	    curr_track_index = 0;   // got to the end of the track, loop back to beginning
+	  else
+	    curr_track_index++;
+	} else {
+	  // step backwards in the track
+	  if (curr_track_index == 0) {
+	    // search thru the buffer -forward- to find the EOT
+	    while ((curr_track_index+1 < TRACK_SIZE) && 
+		   (track_buff[curr_track_index] != END_OF_TRACK))
+	      curr_track_index++;
+	  } else {
+	    curr_track_index--;
+	  }
+	}
+      } else if (just_pressed(KEY_NEXT)) {
+	// starting stepwrite mode
 	start_track_stepwrite_mode();
 	curr_track_index = 0;
       }

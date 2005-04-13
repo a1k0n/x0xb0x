@@ -262,18 +262,31 @@ void do_pattern_edit(void) {
     }
 
 
-    // if in step mode & they press step, then step, otherwise start stepmode
-    if (just_pressed(KEY_NEXT)) {
+    // if in step mode & they press 'next' or 'prev, then step fwd/back, otherwise start stepmode
+    if (just_pressed(KEY_NEXT) || just_pressed(KEY_PREV)) {
       if (in_stepwrite_mode) {
+	// turn off the last note
 	note_off(0);
 	delay_ms(1);
 	//putstring("step");
-	if (((curr_pattern_index+1) >= PATT_SIZE) ||
-	    (pattern_buff[curr_pattern_index] == 0xFF))
-	  curr_pattern_index = 0;
-	else
-	  curr_pattern_index++;
-
+	if (just_pressed(KEY_NEXT)) { 
+	  // get next note from pattern
+	  if (((curr_pattern_index+1) >= PATT_SIZE) ||
+	      (pattern_buff[curr_pattern_index] == END_OF_PATTERN))
+	    curr_pattern_index = 0;
+	  else
+	    curr_pattern_index++;
+	} else {
+	  // get previous note from pattern
+	  if (curr_pattern_index == 0) {
+	    // search thru the buffer -forward- to find the EOP byte
+	    while ((curr_pattern_index < PATT_SIZE-1) && 
+		   (pattern_buff[curr_pattern_index] != END_OF_PATTERN))
+	      curr_pattern_index++;
+	  } else {
+	    curr_pattern_index--;
+	  }
+	}
 	clear_bank_leds();
 	set_bank_led(curr_pattern_index);
 	//putstring("i = "); putnum_ud(curr_pattern_index); putstring("\n\r");
@@ -291,7 +304,7 @@ void do_pattern_edit(void) {
 	  
 	  set_note_led(curr_note);
 	}
-      } else if (! in_runwrite_mode) {
+      } else if (just_pressed(KEY_NEXT) && !in_runwrite_mode) {
 	start_stepwrite_mode();
 
 	curr_pattern_index = 0;
