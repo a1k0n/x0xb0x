@@ -1,0 +1,42 @@
+Model-View-Controller
+=====================
+The x0x c0ntr0l application employs the model-view-controller (MVC)
+paradigm for application design.  This three tier approach seperates
+the graphical user interface (the view) from the mechanics of the
+application such as the serial ports, data storage on disk and
+application logic (the model).  The controller is the interface
+between the object and the view.  Messages between the model and view
+must pass through the controller.  These messages must adhere to
+the specifications listed in this document.
+
+Model <--> Controller Interface
+-------------------------------
+
+The controller can ask the model to:
+
+- openSerialPort()  # Perhaps these happen automatically??
+- closeSerialPort()
+- selectSerialPort(PORT)
+- writepattern(PATTERN, BANK, LOC)
+- readPattern(BANK, LOC)
+- backupAllPatterns(TOFILE)
+- restoreAllPatterns(FROMFILE)
+- sendRunStop()
+- setCurrentBank(BANK)
+- setCurrentLoc(LOC)
+- setTempo(TEMPO)
+- setSync(SYNC)
+
+
+The model can ask the controller to:
+
+- updateSerialStatus(STATE)
+- updateSelectedSerialPort(PORT)
+- updateSerialPortName(PORT,NAME)
+- updatePattern(PATTERN)
+- updateLoc(LOC)
+- updateBank(BANK)
+- updateTempo(TEMPO)
+- updateSync(SYNC)
+
+
