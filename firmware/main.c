@@ -422,6 +422,8 @@ int main(void) {
 
   dinsync_set_out(); // output DINSYNC
 
+  init_midi();
+
   sei();  // enable interrupts
 
   // the main loop!

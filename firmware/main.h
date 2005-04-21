@@ -37,12 +37,13 @@
 
 #define CLK_CALIBRATION_EEADDR 0x1
 #define TEMPO_EEADDR 0x2
-
+#define MIDIADDR_EEADDR 0x3
 #define BOOTLOADER_ADDR 0x3E00UL // 0x1F00 word, 15872 byte
 
 #define INTERNAL_SYNC 0
 #define DIN_SYNC 1
 #define MIDI_SYNC 2
+#define NO_SYNC 3         // for like, keyboard mode & stuff?
 
 #define FALSE 0
 #define TRUE 1

@@ -70,6 +70,8 @@ void blink_leds_off(void);
 void clear_all_leds(void);
 void clear_blinking_leds(void);
 
+void display_octave_shift(int8_t shift);
+
 #define LED_NEXT 36
 #define LED_RS 33
 #define LED_CHAIN 34

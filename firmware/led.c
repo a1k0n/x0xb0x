@@ -276,10 +276,7 @@ void set_note_led(uint8_t note) {
     note -= 4*OCTAVE;
   }
 
-  if (shift == -1)
-    set_led(LED_DOWN);
-  if (shift == 1)
-    set_led(LED_UP);
+  display_octave_shift(shift);
 
   // figure out what led to light
 
@@ -323,4 +320,13 @@ void clear_blinking_leds(void) {
       leds[i] &= ~blinkleds[i];
     blinkleds[i] = 0;
   }
+}
+
+void display_octave_shift(int8_t shift) {
+  clear_led(LED_UP);
+  clear_led(LED_DOWN);
+  if (shift == 1)
+    set_led(LED_UP);
+  else if (shift == -1)
+    set_led(LED_DOWN);
 }

@@ -38,16 +38,17 @@
 #include "switch.h"
 #include "synth.h"
 #include "main.h"
+#include "led.h"
 
 uint8_t midion_accent_velocity = 127;
 uint8_t midioff_velocity = 32;
 uint8_t midion_noaccent_velocity = 100;
 
-uint8_t midi_addr = 0;  // store this in EEPROM
+uint8_t midi_addr;  // store this in EEPROM
 uint8_t midi_running_status = 0;  // suck!
 volatile int16_t midisync_clocked = 0;
 
-extern uint8_t function;
+extern uint8_t function, bank;
 #define function_changed (function != MIDI_CONTROL_FUNC)
 
 extern uint8_t playing;
@@ -83,34 +84,70 @@ SIGNAL(SIG_USART0_RECV) {
   }
 }
 
+uint8_t get_midi_addr(void) {
+  midi_addr = internal_eeprom_read8(MIDIADDR_EEADDR);
+  if (midi_addr > 14)
+    midi_addr = 14;
+  return midi_addr;
+}
+
+void set_midi_addr(uint8_t a) {
+  midi_addr = a;
+  internal_eeprom_write8(MIDIADDR_EEADDR, midi_addr);
+}
+
 void init_midi(void) {
-
-
+  get_midi_addr();
 }
 
 void do_midi_mode(void) {
   char c;
+  uint8_t last_bank;
   uint8_t cmd, note, velocity;
 
   // turn tempo off!
   turn_off_tempo();
 
+  // show midi addr on bank leds
+  clear_bank_leds();
+  set_bank_led(midi_addr);
+
+  last_bank = bank;
+  
   while (1) {
     read_switches();
     if (function_changed) {
-      // turn tempo on
-      turn_on_tempo();
-
+      midi_notesoff(); // clear any stuck notes
       return;
     }
+
+    if (has_bank_knob_changed()) {
+      // bank knob was changed, check if it was going up or down
+      if (last_bank == (bank+1)%16) {
+	if (midi_addr != 0)
+	  midi_addr--;
+      } else {
+	if (midi_addr != 14)
+	  midi_addr++;
+      }
+      // set the new midi address (burn to EEPROM) and display
+      set_midi_addr(midi_addr);
+      clear_bank_leds();
+      set_bank_led(midi_addr);
+
+      last_bank = bank;
+    }
+
+
+    // if theres a char waiting in midi queue...
     if (midi_getch()) {
+      // if its a command & either for our address or 0xF,
+      // set the midi_running_status
       c = midi_getchar();
       if (c >> 7) {       // if the top bit is high, this is a command
-	if ((c & 0xF) == midi_addr) {   
-	  cmd = c >> 4;
-	  midi_running_status = cmd;
-	} else {
-	  continue;
+	if ((c >> 4 == 0xF) ||    // universal cmd, no addressing
+	    (((c >> 4)& 0xF) == midi_addr)) {  // matches our addr
+	  midi_running_status = c >> 4;
 	}
       }
 
@@ -188,7 +225,7 @@ void midi_note_on(uint8_t note, uint8_t velocity) {
   if (velocity > ACCENT_THRESH) 	
     note_on(note - 0x1A, 0, 1);
   else if (velocity == 0) {
-    note_off(0);
+    note_off(0);  // weird thing about midi: note on w/0 velocity == note off
   } else {
     note_on(note - 0x1A, 0, 0);
   }
@@ -253,9 +290,12 @@ void midi_stop(void) {
   // if we were generating midi, stop all notes and send a clockstop signal
   if (sync != MIDI_SYNC) { 
     midi_putchar(MIDI_STOP);
-    
-    midi_putchar((MIDI_CONTROLLER<<4) | midi_addr);
-    midi_putchar(MIDI_ALL_NOTES_OFF);
-    midi_putchar(0);
+    midi_notesoff();
   }
+}
+
+void midi_notesoff(void) {
+  midi_putchar((MIDI_CONTROLLER<<4) | midi_addr);
+  midi_putchar(MIDI_ALL_NOTES_OFF);
+  midi_putchar(0);
 }

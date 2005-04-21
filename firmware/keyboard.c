@@ -39,9 +39,11 @@
 #include "midi.h"
 #include "switch.h"
 
+extern uint8_t bank;
 extern uint8_t function;
 #define function_changed (function != KEYBOARD_MODE_FUNC)
 
+// table from notes (C = 0, C' = 12) to note keys
 const static uint8_t notekey_tab[13] = {
   KEY_C,
   KEY_CS,
@@ -62,33 +64,61 @@ const static uint8_t notekey_tab[13] = {
 void do_keyboard_mode(void) {
   signed int shift = 0;
   uint8_t accent=0, slide=0;
-  uint8_t i;
-
+  uint8_t i, midi_addr, last_bank;
+  
   // turn tempo off!
   turn_off_tempo();
+    
+  // show the current MIDI address
+  midi_addr = get_midi_addr();
+  clear_bank_leds();
+  set_bank_led(midi_addr);
+
+  last_bank = bank;
 
   while (1) {
     read_switches();
+
     if (function_changed) {
+      midi_notesoff();           // turn all notes off
       return;
     }
 
-    clock_leds();  // tempo wont do it for us
+    if (has_bank_knob_changed()) {
+      // bank knob was changed, check if it was going up or down
+      if (last_bank == (bank+1)%16) {
+	if (midi_addr != 0)
+	  midi_addr--;
+      } else {
+	if (midi_addr != 14)
+	  midi_addr++;
+      }
+      // set the new midi address (burn to EEPROM) and display
+      set_midi_addr(midi_addr);
+      clear_bank_leds();
+      set_bank_led(midi_addr);
 
-    clear_led(LED_UP);
-    clear_led(LED_DOWN);
-    if (shift == 1)
-      set_led(LED_UP);
-    else if (shift == -1)
-      set_led(LED_DOWN);
-    
+      last_bank = bank;
+    }
+
+    // show the octave
+    display_octave_shift(shift);
+
     for (i=0; i<13; i++) {
+      // check if any notes were just pressed
       if (just_pressed(notekey_tab[i])) {
 	note_on((C2+i) + shift*OCTAVE, slide, accent);
 	midi_send_note_on( ((C2+i) + shift*OCTAVE) | (accent << 6));
 	slide = TRUE;
       }
+      
+      // check if any notes were released
+      if (just_released(notekey_tab[i])) {
+	midi_send_note_off( ((C2+i) + shift*OCTAVE) | (accent << 6));
+      }
     }
+
+
 
     if (just_pressed(KEY_UP)) {
       if (shift < 1)
@@ -96,24 +126,23 @@ void do_keyboard_mode(void) {
     } else if (just_pressed(KEY_DOWN)) {
       if (shift > -1)
 	shift--;
-    } else if (just_pressed(KEY_ACCENT)) {
+    } 
+
+    // check if they turned accent on
+    if (just_pressed(KEY_ACCENT)) {
       accent = !accent;
       if (accent)
 	set_led(LED_ACCENT);
       else
 	clear_led(LED_ACCENT);
-
-    } else if ((NOTE_PIN & 0x3F) != 0 && no_keys_pressed()) {
+    }
+    
+    // if no keys are held down and there was a note just playing
+    // turn off the note.
+    if ((NOTE_PIN & 0x3F) && no_keys_pressed()) {
       note_off(0);
       slide = FALSE;
     }
 
-
-    // fix me add accent to midi out?
-    for (i=0; i<13; i++) {
-      if (just_released(notekey_tab[i])) {
-	midi_send_note_off((C2+i) + shift*OCTAVE);
-      }
-    }
   }
 }

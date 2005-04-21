@@ -57,6 +57,10 @@ int midi_getchar(void);
 void do_midi_mode(void);
 
 
+
+
+uint8_t get_midi_addr(void);
+void set_midi_addr(uint8_t a);
 void midi_note_off(uint8_t note, uint8_t velocity);
 void midi_note_on(uint8_t note, uint8_t velocity);
 
@@ -66,5 +70,6 @@ void midi_send_note_off(uint8_t note);
 uint8_t midi_recv_cmd(void);
 
 void midi_stop(void);
+void midi_notesoff(void);
 
 #endif
