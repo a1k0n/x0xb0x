@@ -91,14 +91,11 @@ void do_track_edit(void) {
       turn_off_tempo();
       play_loaded_track = play_loaded_pattern = 0;
 
-      // turn off notes and midi/dinsync
+      // turn off notes playing
       note_off(0);
-      dinsync_stop();
-      midi_stop();
 
       // clear the LEDs
-      clear_bank_leds();
-      clear_key_leds();
+      clear_all_leds();
       clock_leds();
 
       return;
@@ -109,17 +106,22 @@ void do_track_edit(void) {
       if (track_location != bank) {
 	track_location = bank;
 	load_track(track_location);
-	clear_blinking_leds();
+	clear_bank_leds();  // track changed, clear the prev indicator
       }
-      set_bank_led_blink(track_location);  // show the track being edited
+      set_bank_led(track_location);  // show the track being edited
     } else {
+      // in stepwrite/run mode
+
+      // track position changed, clear blinking LEDs and show new position
       if (prev_track_index != curr_track_index) {
 	prev_track_index = curr_track_index;
 	clear_blinking_leds();
       }
       set_bank_led_blink(curr_track_index);  // show the current position in the edited track
+
       if (curr_patt == END_OF_TRACK) {
 	clear_note_leds();
+
 	set_led(LED_DONE);                   // the 'end of track' (0xFFFF) lights up DONE
       } else {
 	clear_led(LED_DONE);                 // make sure DONE isn't on anymore
@@ -240,10 +242,9 @@ void do_track_edit(void) {
     }
   
     if (in_stepwrite_mode) {
-      set_led(LED_NEXT);                                         // show we're in this mode
-      
-      // handle RAS keypresses -> modifications to current pattern
       if (curr_patt != END_OF_TRACK) {
+	// handle RAS keypresses -> modifications to current pattern
+	
 	if (just_pressed(KEY_REST)) {
 	  curr_patt = (track_buff[curr_track_index] ^= TRACK_REST_FLAG);
 	  all_rest = (curr_patt & TRACK_REST_FLAG) >> 8;
@@ -256,46 +257,44 @@ void do_track_edit(void) {
 	  curr_patt = (track_buff[curr_track_index] ^= TRACK_SLIDE_FLAG);
 	  all_slide = (curr_patt & TRACK_SLIDE_FLAG) >> 8;
 	}
-      }
-
-      // handle U/D keypresses -> pitch shifting
-      if (is_pressed(KEY_UP) || is_pressed(KEY_DOWN)) {
-	uint16_t notekey = get_lowest_notekey_pressed();
 	
-	if (just_pressed(KEY_UP) || just_pressed(KEY_DOWN)) {
-	  clear_blinking_leds();
-	  clear_notekey_leds();
-	  clear_led(LED_UP);
-	  clear_led(LED_DOWN);
-	}
-	
-	if (is_pressed(KEY_UP)) {
-	  set_led(LED_UP);
+	// handle U/D keypresses -> pitch shifting
+	if (is_pressed(KEY_UP) || is_pressed(KEY_DOWN)) {
+	  uint16_t notekey = get_lowest_notekey_pressed();
 	  
-	  if (notekey != -1) {
+	  if (just_pressed(KEY_UP) || just_pressed(KEY_DOWN)) {
 	    clear_blinking_leds();
-	    // set the new pitchshift
-	    curr_patt = (curr_patt & 0xE0FF) | (notekey << 8);
-	    track_buff[curr_track_index] = curr_patt; 
+	    clear_notekey_leds();
+	    clear_led(LED_UP);
+	    clear_led(LED_DOWN);
 	  }
-	  // display the pitchshift
-	  curr_pitch_shift = get_pitchshift_from_patt(curr_patt);
-	  set_notekey_led_blink(curr_pitch_shift);
-	} else if (is_pressed(KEY_DOWN)) {
-	  set_led(LED_DOWN);
 	  
-	  if (notekey != -1) {
-	    clear_blinking_leds();
-	    // set the new pitchshift
-	    curr_patt = (curr_patt & 0xE0FF) | (((notekey - 12) & 0x1F) << 8);
-	    track_buff[curr_track_index] = curr_patt; 
+	  if (is_pressed(KEY_UP)) {
+	    set_led(LED_UP);
+	    
+	    if (notekey != -1) {
+	      clear_blinking_leds();
+	      // set the new pitchshift
+	      curr_patt = (curr_patt & 0xE0FF) | (notekey << 8);
+	      track_buff[curr_track_index] = curr_patt; 
+	    }
+	    // display the pitchshift
+	    curr_pitch_shift = get_pitchshift_from_patt(curr_patt);
+	    set_notekey_led_blink(curr_pitch_shift);
+	  } else if (is_pressed(KEY_DOWN)) {
+	    set_led(LED_DOWN);
+	    
+	    if (notekey != -1) {
+	      clear_blinking_leds();
+	      // set the new pitchshift
+	      curr_patt = (curr_patt & 0xE0FF) | (((notekey - OCTAVE) & 0x1F) << 8);
+	      track_buff[curr_track_index] = curr_patt; 
+	    }
+	    
+	    curr_pitch_shift = get_pitchshift_from_patt(curr_patt);
+	    set_notekey_led_blink(OCTAVE + curr_pitch_shift);
 	  }
-
-	  curr_pitch_shift = get_pitchshift_from_patt(curr_patt);
-	  set_notekey_led_blink(C3 - C2 + curr_pitch_shift);
-	}
-      } else {
-	if (just_released(KEY_UP) || just_released(KEY_DOWN)) {
+	} else if (just_released(KEY_UP) || just_released(KEY_DOWN)) {
 	  clear_led(LED_UP);
 	  clear_led(LED_DOWN);
 	  clear_blinking_leds();
@@ -303,43 +302,34 @@ void do_track_edit(void) {
 
 	set_numkey_led((curr_patt & 0x7) +1);    // show the location of the current pattern
 	display_curr_pitch_shift_ud();
-
-	// see if they changed the bank / pressed numkey -> change current pattern
-	i = get_lowest_numkey_just_pressed();
-	if ((i != 0) || has_bank_knob_changed()) {
-	  clear_numkey_leds();
-	  clear_bank_leds();
-	  if (i == 0) {
-	    if (curr_patt == END_OF_TRACK)
-	      i = 0;
-	    else
-	      i = curr_patt & 0x7;
-	  } else {
-	    i--;
-	  }
-	  note_off(0);
-	  curr_patt = (bank << 3) | i;
-	  track_buff[curr_track_index] = curr_patt;
-	  load_pattern(bank, i);
-	  curr_pattern_index = 0;
-	  all_rest = all_accent = all_slide = FALSE;
-	  curr_pitch_shift = 0;
-	  play_loaded_pattern = TRUE;
-	}
       }
-    }
-    
-    if (in_run_mode) {
-      set_led(LED_RS);
-      clear_numkey_leds();
-      set_numkey_led((curr_patt & 0x7) +1);    // show the location of the current pattern
-      // the tempo interrupt does virtually everything for run mode
       
-      // show pitchshift
-      display_curr_pitch_shift_ud();
+      // see if they changed the bank / pressed numkey -> change current pattern
+      i = get_lowest_numkey_just_pressed();
+      if ((i != 0) || has_bank_knob_changed()) {
+	clear_numkey_leds();
+	clear_bank_leds();
+	if (i == 0) {
+	  if (curr_patt == END_OF_TRACK)
+	    i = 0;
+	  else
+	    i = curr_patt & 0x7;
+	} else {
+	  i--;
+	}
+	note_off(0);
+	curr_patt = (bank << 3) | i;
+	track_buff[curr_track_index] = curr_patt;
+	load_pattern(bank, i);
+	curr_pattern_index = 0;
+	all_rest = all_accent = all_slide = FALSE;
+	curr_pitch_shift = 0;
+	play_loaded_pattern = TRUE;
+      }
     }
   }
 }
+
 
 int8_t get_pitchshift_from_patt(uint16_t patt) { 
  int8_t shift;
@@ -378,6 +368,7 @@ static void stop_track_stepwrite_mode(void) {
  
 static void start_track_run_mode(void) {
   in_run_mode = TRUE;
+  set_led(LED_RS);
   all_rest = all_slide = all_accent = FALSE;
 }
 

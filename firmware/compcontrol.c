@@ -54,8 +54,7 @@ void do_computer_control() {
     read_switches();
     if (function_changed) {
       // oops i guess they want something else, return!
-      clear_bank_leds();
-      clear_key_leds();
+      clear_all_leds();
       clock_leds();
       return;
     }

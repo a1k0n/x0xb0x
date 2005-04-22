@@ -43,10 +43,14 @@
 #include "dinsync.h"
 #include "midi.h"
 
+// these are set by read_switches()
 extern uint8_t function, bank;
 
+// The tempo note counter. used to start runwrite on a note-on interrupt call
+volatile uint8_t note_counter;
+
 volatile uint8_t curr_pattern_index;
-uint8_t play_loaded_pattern; // are we playing?
+uint8_t play_loaded_pattern;                 // are we playing?
 uint8_t patt_location, patt_bank;
 volatile uint8_t pattern_buff[PATT_SIZE];    // the 'loaded' pattern buffer
 
@@ -72,10 +76,14 @@ void do_pattern_edit(void) {
 
   load_pattern(patt_bank, patt_location);
   clear_all_leds();
-  
+
+  set_bank_led(bank);
+      
   turn_on_tempo();
 
   while (1) {
+    read_switches();
+
     if (function != EDIT_PATTERN_FUNC) {
       // oops i guess they want something else, return!
       turn_off_tempo();
@@ -87,8 +95,7 @@ void do_pattern_edit(void) {
       midi_stop();
 
       // clear the LEDs
-      clear_bank_leds();
-      clear_key_leds();
+      clear_all_leds();
       clock_leds();
       return;
     }
@@ -101,18 +108,9 @@ void do_pattern_edit(void) {
 	stop_stepwrite_mode();
       patt_bank = bank;
       load_pattern(patt_bank, patt_location);
+      clear_bank_leds();
+      set_bank_led(bank);
     }
-
-    // display whatever bank is selected on the 16 leds
-    //clear_bank_leds();
-    //set_bank_led(bank);
-
-    if (in_runwrite_mode)
-      set_led(LED_RS); 
-
-    if (in_stepwrite_mode)
-      set_led(LED_NEXT); 
-
 
     // if they pressed one of the 8 bottom buttons (location select)
     if (! (in_runwrite_mode || in_stepwrite_mode)) {
@@ -121,7 +119,7 @@ void do_pattern_edit(void) {
 
       i = get_lowest_numkey_pressed();
       if (i != 0) {
-	clear_key_leds();
+	clear_notekey_leds();
 	set_numkey_led(i);
 	patt_location = i - 1;
 	load_pattern(patt_bank, patt_location);
@@ -286,9 +284,13 @@ void do_pattern_edit(void) {
 	  } else {
 	    curr_pattern_index--;
 	  }
+
 	}
+
 	clear_bank_leds();
 	set_bank_led(curr_pattern_index);
+
+
 	//putstring("i = "); putnum_ud(curr_pattern_index); putstring("\n\r");
 	curr_note = pattern_buff[curr_pattern_index];
 
@@ -336,8 +338,6 @@ void do_pattern_edit(void) {
       write_pattern(bank, patt_location);
     }
 
-    clock_leds();
-    read_switches();
 
   } // while loop
 }
@@ -412,10 +412,12 @@ void write_pattern(uint8_t bank, uint8_t patt_location) {
 void start_runwrite_mode() {
   putstring("start runwrite\n\r");
   curr_pattern_index = 0;
-  play_loaded_pattern = 1;
   in_runwrite_mode = 1;
-
+  set_led(LED_RS); 
+  note_off(0);
   turn_on_tempo();
+  while (note_counter & 0x1);  // wait for the tempo interrupt to be ready for a note-on
+  play_loaded_pattern = 1;
 }
 
 void stop_runwrite_mode() {
@@ -424,22 +426,32 @@ void stop_runwrite_mode() {
   play_loaded_pattern = 0;
   clear_key_leds();
   clear_bank_leds();
+  set_bank_led(bank);
   in_runwrite_mode = 0;
+  clear_led(LED_RS);
   note_off(0);
 }
+
+
+
 
 void start_stepwrite_mode() {
   putstring("start stepwrite\n\r");
   in_stepwrite_mode = 1;
+  set_led(LED_NEXT); 
   clear_bank_leds();
   set_bank_led(0);
   turn_off_tempo();
+  note_off(0);
 }
 
 void stop_stepwrite_mode() {
   putstring("stop stepwrite\n\r");
   in_stepwrite_mode = 0;
+  clear_led(LED_NEXT); 
   clear_key_leds();
   clear_bank_leds();
+  set_bank_led(bank);
   turn_on_tempo();
+  note_off(0);
 }

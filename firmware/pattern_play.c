@@ -108,6 +108,9 @@ void do_pattern_play(void) {
   curr_pattern_chain_index = 0;
   curr_pitch_shift = next_pitch_shift = 0;
 
+  clear_bank_leds();
+  set_bank_led(bank);
+
   clock_leds();
 
   while (1) {
@@ -140,29 +143,30 @@ void do_pattern_play(void) {
 
     // start a new chain if just pressed
     if (just_pressed(KEY_CHAIN)) {
+      clear_notekey_leds();
+      clear_blinking_leds();
+      set_led(LED_CHAIN);
       buff_patt_chain_len = 0;  // 'start' to write a new chain
     }
 
+    // releasing the chain key 'finalizes' the chain buffer
     if (just_released(KEY_CHAIN)) {
-      // make the 'next pattern' a chain!
       for (i=0; i<MAX_PATT_CHAIN; i++)
 	next_pattern_chain[i] = buff_pattern_chain[i];
 
+      // if we're not playing something right now, curr = next
       if (!playing) {
 	for (i=0; i<MAX_PATT_CHAIN; i++)
 	  curr_pattern_chain[i] = next_pattern_chain[i];
-
 	curr_pitch_shift = next_pitch_shift;
 	clear_led(LED_UP);
 	clear_led(LED_DOWN);
       }
+
+      clear_led(LED_CHAIN);
     }
 
     if (is_pressed(KEY_CHAIN)) {
-      clear_notekey_leds();
-      clear_blinking_leds();
-      set_led(LED_CHAIN);
-
       // display the current pattern chain
       for (i=0; i<buff_patt_chain_len; i++) {
 	if (buff_pattern_chain[i] >= 8)
@@ -170,9 +174,9 @@ void do_pattern_play(void) {
 	set_numkey_led(buff_pattern_chain[i]+1);
       }
 
-      // ok lets set up some chains!
+      // ok lets add patterns to the buffer chain!
       i = get_lowest_numkey_just_pressed();
-      if (i != 0) {
+      if ((i != 0) && (buff_patt_chain_len < MAX_PATT_CHAIN)) {
 	buff_pattern_chain[buff_patt_chain_len++] = i - 1;
 	buff_pattern_chain[buff_patt_chain_len] = 0xFF;
 
@@ -189,30 +193,30 @@ void do_pattern_play(void) {
 
       }
     }
-
-    // if they press U or D, show the current pitch shift
+    // if they press U or D, show the current pitch shift and allow pitch shift adjust
     else if (is_pressed(KEY_UP) || is_pressed(KEY_DOWN)) {
       int8_t notekey = get_lowest_notekey_pressed();
 
       // clear any pattern indicator leds
-      clear_notekey_leds();
-      clear_blinking_leds();
-      clear_led(LED_CHAIN);
+      if (just_pressed(KEY_UP) || just_pressed(KEY_DOWN)) {
+	clear_notekey_leds();
+	clear_blinking_leds();
+	clear_led(LED_CHAIN);
+      }
 
-      if (!playing)
-	curr_pitch_shift = next_pitch_shift;
-      
       // check if they are changing the shift
-      clear_notekey_leds();
       if (is_pressed(KEY_UP)) {
 	clear_led(LED_DOWN);
 	set_led(LED_UP);
 
-	if (notekey != -1)
+	if (notekey != -1) 
 	  next_pitch_shift = notekey; 
-	if (curr_pitch_shift >= 0)
-	  set_notekey_led_blink(curr_pitch_shift);
-
+	if (curr_pitch_shift >= 0) {
+	  if (! is_notekey_led_blink(curr_pitch_shift)) {
+	    clear_blinking_leds();
+	    set_notekey_led_blink(curr_pitch_shift);
+	  }
+	}
 	if (next_pitch_shift != curr_pitch_shift)
 	  set_notekey_led(next_pitch_shift);
       } else if (is_pressed(KEY_DOWN)) {
@@ -220,42 +224,54 @@ void do_pattern_play(void) {
 	set_led(LED_DOWN);
 
 	if (notekey != -1)
-	  next_pitch_shift = notekey - 12;  // invert direction 
+	  next_pitch_shift = notekey - OCTAVE;  // invert direction 
 
-	if (curr_pitch_shift <= 0)
-	  set_notekey_led(C3 - C2 + curr_pitch_shift);
-
+	if (curr_pitch_shift <= 0) {
+	  if (!is_notekey_led_blink(OCTAVE + curr_pitch_shift)) {
+	    clear_blinking_leds();
+	    set_notekey_led_blink(OCTAVE + curr_pitch_shift);
+	  }
+	}
 	if (next_pitch_shift != curr_pitch_shift)
-	  set_notekey_led_blink(C3 - C2 + next_pitch_shift);
-
+	  set_notekey_led(OCTAVE + next_pitch_shift);
       }
+
+      // if not playing something right now,
+      // make the pitch shift effective immediately
+      if (!playing)
+	curr_pitch_shift = next_pitch_shift;      
+
     } else {
+      if (just_released(KEY_UP) || just_released(KEY_DOWN)) {
+	// clear any pitch shift indicators
+	clear_notekey_leds();
+	clear_blinking_leds();
+      }
+
+      // if they just pressed a numkey, make a chain thats
+      // one pattern long
       i = get_lowest_numkey_pressed();
       if ((i != 0) || has_bank_knob_changed()) {
 	if (i != 0) {
+	  clear_numkey_leds();
 	  next_pattern_chain[0] = i - 1;
 	  next_pattern_chain[1] = 0xFF;
 	  if (!playing)
 	    for (i=0; i<MAX_PATT_CHAIN; i++) 
 	      curr_pattern_chain[i] = next_pattern_chain[i];
-
 	} else {
 	  next_bank = bank;
 	  if (!playing)
 	    curr_bank = bank;
 	}
 	if (!playing) {
+	  clear_bank_leds();
+	  set_bank_led(bank);
 	  curr_pitch_shift = next_pitch_shift;
-	  clear_led(LED_UP);
-	  clear_led(LED_DOWN);
 	}
       }
       
       // indicate current pattern & next pattern & shift 
-      clear_notekey_leds();
-      clear_blinking_leds();
-      clear_led(LED_CHAIN);
-
       if (!chains_equiv(next_pattern_chain, curr_pattern_chain)) {
 	if (next_pattern_chain[1] == 0xFF && curr_pattern_chain[1] == 0xFF) {
 	  // basically single patterns. current blinks
@@ -272,21 +288,25 @@ void do_pattern_play(void) {
 	for (i=0; i<MAX_PATT_CHAIN; i++) {
 	  if (curr_pattern_chain[i] > 8)
 	    break;
-	  set_numkey_led(curr_pattern_chain[i] + 1);
-	}
-	if (playing) {
-	  clear_numkey_led(curr_pattern_chain[curr_pattern_chain_index] + 1);
-	  set_numkey_led_blink(curr_pattern_chain[curr_pattern_chain_index] + 1);
+	  if (playing && (curr_pattern_chain[i] == curr_pattern_chain[curr_pattern_chain_index])) {
+	    if (! is_numkey_led_blink(curr_pattern_chain[i]+1) ) 
+	      {
+		clear_numkey_led(curr_pattern_chain[i]+1);
+		set_numkey_led_blink(curr_pattern_chain[i]+1); // if playing, current pattern blinks
+	      }
+	  } else {
+	    if (is_numkey_led_blink(curr_pattern_chain[i]+1))
+	      clear_blinking_leds();
+	    set_numkey_led(curr_pattern_chain[i] + 1);  // all other patterns in chain solid
+	  }
 	}
       }
-
       display_curr_pitch_shift_ud();
     }
 
     
     if (playing)
       {
-	set_led(LED_RS);
 	// midi sync clock ticks
 	if ((sync == MIDI_SYNC) && (midisync_clocked > 0)) {
 	  midisync_clocked -= MIDISYNC_PPQ/8;
@@ -326,19 +346,24 @@ void do_pattern_play(void) {
 	 ((sync == DIN_SYNC) && dinsync_stopped()) ) 
       {
 	//putstring("stop\n\r");
-	clear_led(LED_RS);
 	playing = 0;
 	play_loaded_pattern = 0;
 	note_off(0);
 	midi_stop();
 	if (sync != DIN_SYNC) 
 	  dinsync_stop();
+
+	clear_led(LED_RS);
+	clear_blinking_leds();
+	clear_bank_leds();
+	set_bank_led(bank);
       }
     else if ( ((sync == INTERNAL_SYNC) && just_pressed(KEY_RS) && !playing) ||
 	      ((sync == MIDI_SYNC) && 
 	       ((midi_cmd == MIDI_START) || (midi_cmd == MIDI_CONTINUE))) ||
 	      ((sync == DIN_SYNC) && dinsync_started()) )
       {
+	set_led(LED_RS);
 	//putstring("start\n\r");
 
 	load_pattern(bank, curr_pattern_chain[0]);

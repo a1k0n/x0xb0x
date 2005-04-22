@@ -168,8 +168,15 @@ void do_tempo(void) {
 	    all_accent = (curr_patt & TRACK_ACCENT_FLAG) >> 8;
 	    all_slide = (curr_patt & TRACK_SLIDE_FLAG) >> 8;
 
-	    // set the pattern's pitch shift
+	    // set the pattern's pitch shift & display it
 	    curr_pitch_shift = get_pitchshift_from_patt(curr_patt);
+	    display_curr_pitch_shift_ud();
+
+	    // show the pattern location and pattern bank
+	    clear_numkey_leds();
+	    set_numkey_led((curr_patt & 0x7) +1 );    // show the location of the current pattern
+	    clear_bank_leds();
+	    set_bank_led((curr_patt >> 3) & 0xF);
 	  }
 	}
       }
@@ -181,6 +188,11 @@ void do_tempo(void) {
         if (curr_note != 0xFF) {
           note_off((curr_note >> 7) & 0x1);        // slide
         }
+	curr_pattern_index++;
+	if ((curr_pattern_index >= PATT_SIZE) || 
+	    (pattern_buff[curr_pattern_index] == 0xFF)) {
+	  curr_pattern_index = 0;
+	} 
       }
       break;
 
@@ -197,7 +209,7 @@ void do_tempo(void) {
 	else
 	  midi_send_note_off(curr_note);
 
-	// last note of this pattern this pattern?
+	// last note of this pattern?
 	if ((curr_pattern_index >= PATT_SIZE) || 
 	    (pattern_buff[curr_pattern_index] == 0xFF)) {
 
@@ -213,12 +225,16 @@ void do_tempo(void) {
 	      (curr_bank != next_bank)) {
 
 	    // copy next pattern chain into current pattern chain
-	    for (i=0; i<MAX_PATT_CHAIN; i++)
+	    for (i=0; i<MAX_PATT_CHAIN; i++) {
 	      curr_pattern_chain[i] = next_pattern_chain[i];
+	    }
 	    curr_pattern_chain_index = 0;  // reset to beginning
 
 	    // reset the pitch
 	    next_pitch_shift = curr_pitch_shift = 0;
+
+	    clear_notekey_leds();
+	    clear_blinking_leds();
 	  }
 	  
 	  curr_bank = next_bank;
@@ -272,6 +288,7 @@ void do_tempo(void) {
 		     (prev_note >> 7) | all_slide,  // slide is from prev note!
 		     ((curr_note>>6) & 0x1) | all_accent);       // accent
 	  }
+	
 	}
       }
       break;
@@ -279,17 +296,14 @@ void do_tempo(void) {
     case EDIT_PATTERN_FUNC: 
       if (play_loaded_pattern) {
 	// load up the next note
-	if ((curr_pattern_index >= PATT_SIZE) || 
-	    (pattern_buff[curr_pattern_index] == 0xFF)) {
-	  curr_pattern_index = 0;
-	}
-	
 	clear_bank_leds();
 	set_bank_led(curr_pattern_index);
 	prev_note = curr_note;
-	curr_note = pattern_buff[curr_pattern_index++];
+	curr_note = pattern_buff[curr_pattern_index];
 
-	//printf("location %d: %x\n\r", curr_pattern_index, curr_note);
+	//putstring("\n\rlocation "); putnum_ud(curr_pattern_index);
+	//putstring(" note: 0x"); putnum_uh(curr_note);
+	
 	if (curr_note != 0xFF) {
 	  set_note_led(curr_note);
 	  note_on(curr_note & 0x3F,

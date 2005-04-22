@@ -42,6 +42,7 @@ void set_led(uint8_t ledno);
 void set_led_blink(uint8_t ledno);
 
 int is_led_set(uint8_t ledno);
+uint8_t is_led_blink(uint8_t num);
 
 void set_bank_led(uint8_t num);
 void set_bank_led_blink(uint8_t num);
@@ -56,10 +57,13 @@ void set_numkey_led(uint8_t num);
 void set_numkey_led_blink(uint8_t num);
 void clear_numkey_leds(void);
 void clear_numkey_led(uint8_t num);
+uint8_t is_numkey_led_blink(uint8_t num);
+uint8_t is_numkey_led_set(uint8_t num);
 
 void set_notekey_led(uint8_t note);
 void set_notekey_led_blink(uint8_t num);
 void clear_notekey_leds(void);
+uint8_t is_notekey_led_blink(uint8_t num);
 
 void set_note_led(uint8_t note);
 void clear_note_leds(void);

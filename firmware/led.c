@@ -130,6 +130,12 @@ void set_led_blink(uint8_t ledno) {
   blinkleds[ledno / 8] |= 1 << (ledno % 8);
 }
 
+uint8_t is_led_blink(uint8_t ledno) {
+  if (ledno >= MAX_LED)
+    return 0;
+  return blinkleds[ledno / 8] & _BV(ledno % 8);
+}
+
 void clear_led(uint8_t ledno) {
   if (ledno >= MAX_LED)
     return;
@@ -208,6 +214,19 @@ void set_numkey_led_blink(uint8_t num) {
     set_led_blink(numkey_led_tab[num-1]);
 }
 
+uint8_t is_numkey_led_blink(uint8_t num) {
+  if ((num >= 1) && (num <= 8))
+    return is_led_blink(numkey_led_tab[num-1]);
+  return 0;
+}
+
+
+uint8_t is_numkey_led_set(uint8_t num) {
+  if ((num >= 1) && (num <= 8))
+    return is_led_set(numkey_led_tab[num-1]);
+  return 0;
+}
+
 void clear_numkey_leds(void) {
   uint8_t i;
   for (i = 0; i < 8; i++) {
@@ -225,6 +244,10 @@ void set_notekey_led(uint8_t num) {
 void set_notekey_led_blink(uint8_t num) {
   if (num <= 12)
     set_led_blink(notekey_led_tab[num]);
+}
+
+uint8_t is_notekey_led_blink(uint8_t num) {
+  return is_led_blink(notekey_led_tab[num]);
 }
 
 void clear_notekey_leds(void) {
