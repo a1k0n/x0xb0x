@@ -82,11 +82,12 @@ extern volatile uint8_t pattern_buff[PATT_SIZE];    // the 'loaded' pattern buff
 uint8_t curr_note, prev_note = 0;
 
 // from pattern_play.c
-extern volatile uint8_t curr_pattern_chain[MAX_PATT_CHAIN];
-extern volatile uint8_t next_pattern_chain[MAX_PATT_CHAIN];
-extern volatile uint8_t curr_pattern_chain_index;
+extern volatile uint8_t curr_chain[MAX_CHAIN];
+extern volatile uint8_t next_chain[MAX_CHAIN];
+extern volatile uint8_t curr_chain_index;
 extern volatile uint8_t curr_bank, next_bank;
 extern volatile uint8_t all_accent, all_slide, all_rest; // all the time
+extern volatile uint8_t playing;
 
 extern volatile uint8_t dinsync_counter;  // defined in dinsync.c
 extern volatile uint8_t dinsync_status; // same
@@ -199,7 +200,7 @@ void do_tempo(void) {
     case PLAY_PATTERN_MIDISYNC_FUNC:
     case PLAY_PATTERN_DINSYNC_FUNC:
     case PLAY_PATTERN_FUNC: 
-      if (play_loaded_pattern) {
+      if (playing) {
 	if (curr_note != 0xFF) {
 	  // check if the note had slide on it 
 	  note_off(((curr_note>>7) & 0x1) | all_slide); // slide
@@ -214,21 +215,21 @@ void do_tempo(void) {
 	    (pattern_buff[curr_pattern_index] == 0xFF)) {
 
 	  curr_pattern_index = 0;          // start next pattern in chain
-	  curr_pattern_chain_index++;      // go to next patt in chain
+	  curr_chain_index++;      // go to next patt in chain
 	  // last pattern in this chain?
-	  if ((curr_pattern_chain_index >= MAX_PATT_CHAIN) ||
-	      (curr_pattern_chain[curr_pattern_chain_index] == 0xFF)) {
-	    curr_pattern_chain_index = 0;
+	  if ((curr_chain_index >= MAX_CHAIN) ||
+	      (curr_chain[curr_chain_index] == 0xFF)) {
+	    curr_chain_index = 0;
 	  }
 	  
-	  if (!chains_equiv(next_pattern_chain, curr_pattern_chain) ||
+	  if (!chains_equiv(next_chain, curr_chain) ||
 	      (curr_bank != next_bank)) {
 
 	    // copy next pattern chain into current pattern chain
-	    for (i=0; i<MAX_PATT_CHAIN; i++) {
-	      curr_pattern_chain[i] = next_pattern_chain[i];
-	    }
-	    curr_pattern_chain_index = 0;  // reset to beginning
+	    for (i=0; i<MAX_CHAIN; i++) 
+	      curr_chain[i] = next_chain[i];
+	    
+	    curr_chain_index = 0;  // reset to beginning
 
 	    // reset the pitch
 	    next_pitch_shift = curr_pitch_shift = 0;
@@ -240,11 +241,64 @@ void do_tempo(void) {
 	  curr_bank = next_bank;
 	  curr_pitch_shift = next_pitch_shift;
 
-	  load_pattern(curr_bank, curr_pattern_chain[curr_pattern_chain_index]);	  
+	  load_pattern(curr_bank, curr_chain[curr_chain_index]);
 	}
       }
       break;
-      
+
+
+    case PLAY_TRACK_MIDISYNC_FUNC:
+    case PLAY_TRACK_DINSYNC_FUNC:
+    case PLAY_TRACK_FUNC: 
+      if (playing) {
+	if (curr_note != 0xFF) {
+	  // check if the note had slide on it 
+	  note_off(((curr_note>>7) & 0x1) | all_slide); // slide
+	}
+	if ((curr_note & 0x3F) != 0)  // not rest
+	  midi_send_note_off(curr_note + curr_pitch_shift);
+	else
+	  midi_send_note_off(curr_note);
+
+	// last note of this pattern?
+	if ((curr_pattern_index >= PATT_SIZE) || 
+	    (pattern_buff[curr_pattern_index] == 0xFF)) {
+
+	  curr_pattern_index = 0;          // start next pattern in track
+	  curr_track_index++;
+
+
+	  curr_chain_index++;      // go to next track in chain
+	  // last pattern in this chain?
+	  if ((curr_chain_index >= MAX_CHAIN) ||
+	      (curr_chain[curr_chain_index] == 0xFF)) {
+	    curr_chain_index = 0;
+	  }
+	  
+	  if (!chains_equiv(next_chain, curr_chain) ||
+	      (curr_bank != next_bank)) {
+
+	    // copy next pattern chain into current pattern chain
+	    for (i=0; i<MAX_CHAIN; i++) 
+	      curr_chain[i] = next_chain[i];
+	    
+	    curr_chain_index = 0;  // reset to beginning
+
+	    // reset the pitch
+	    next_pitch_shift = curr_pitch_shift = 0;
+
+	    clear_notekey_leds();
+	    clear_blinking_leds();
+	  }
+	  
+	  curr_bank = next_bank;
+	  curr_pitch_shift = next_pitch_shift;
+
+	  load_pattern(curr_bank, curr_chain[curr_chain_index]);
+	}
+      }
+      break;
+
     }
   } else {
     switch(function) {
@@ -316,9 +370,19 @@ void do_tempo(void) {
     case PLAY_PATTERN_MIDISYNC_FUNC:
     case PLAY_PATTERN_DINSYNC_FUNC:
     case PLAY_PATTERN_FUNC: 
-      if (play_loaded_pattern) {
-	clear_bank_leds();
-	set_bank_led(curr_pattern_index);
+      if (playing) {
+	// in pattern play we show each note indexed in the pattern
+	  clear_bank_leds();
+	  set_bank_led(curr_pattern_index);
+      }
+      // no break here! continue on to shared track/pattern play code...
+    case PLAY_TRACK_MIDISYNC_FUNC:
+    case PLAY_TRACK_DINSYNC_FUNC:
+    case PLAY_TRACK_FUNC: 
+      if (playing) {
+	// in track play, we blink the track location but thats
+	// taken care of in the note off portion (when patterns are loaded)
+
 	prev_note = curr_note;
 	curr_note = pattern_buff[curr_pattern_index++];
 
@@ -455,17 +519,17 @@ int main(void) {
     case PLAY_PATTERN_FUNC:
       putstring("PattPlay\n\r");
       sync = INTERNAL_SYNC;
-      do_pattern_play();
+      do_patterntrack_play();
       break;
     case PLAY_PATTERN_DINSYNC_FUNC:
       putstring("PattPlay DINSYNC\n\r");
       sync = DIN_SYNC;
-      do_pattern_play();
+      do_patterntrack_play();
       break;
     case PLAY_PATTERN_MIDISYNC_FUNC:
       putstring("PattPlay MidiSYNC\n\r");
       sync = MIDI_SYNC;
-      do_pattern_play();
+      do_patterntrack_play();
       break;
     case EDIT_TRACK_FUNC:
       putstring("TrackEdit\n\r");

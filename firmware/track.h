@@ -36,12 +36,12 @@
 
 void do_track_edit(void);
 
-static void start_track_stepwrite_mode(void);
-static void stop_track_stepwrite_mode(void);
-static void stop_track_run_mode(void);
-static void start_track_run_mode(void);
-void load_track(uint8_t track_loc);
-void write_track(uint8_t track_loc);
+void start_track_stepwrite_mode(void);
+void stop_track_stepwrite_mode(void);
+void stop_track_run_mode(void);
+void start_track_run_mode(void);
+void load_track(uint8_t bank, uint8_t track_loc);
+void write_track(uint8_t bank, uint8_t track_loc);
 
 void display_curr_pitch_shift_ud(void);
 int8_t get_pitchshift_from_patt(uint16_t patt);

@@ -105,7 +105,7 @@ void do_track_edit(void) {
       // this is when they select which track to edit (1-16)
       if (track_location != bank) {
 	track_location = bank;
-	load_track(track_location);
+	//load_track(track_location);
 	clear_bank_leds();  // track changed, clear the prev indicator
       }
       set_bank_led(track_location);  // show the track being edited
@@ -238,7 +238,7 @@ void do_track_edit(void) {
 	play_loaded_pattern = FALSE;
 	clear_led(LED_DONE);
       }
-      write_track(track_location);                               // and write it to memory
+      //write_track(track_location);                               // and write it to memory
     }
   
     if (in_stepwrite_mode) {
@@ -354,46 +354,46 @@ void display_curr_pitch_shift_ud(void) {
   }
 }
 
-static void start_track_stepwrite_mode(void) {
+void start_track_stepwrite_mode(void) {
   in_stepwrite_mode = TRUE;
 }
 
 
-static void stop_track_stepwrite_mode(void) {
+void stop_track_stepwrite_mode(void) {
   in_stepwrite_mode = FALSE;
   clear_led(LED_NEXT);
   clear_all_leds();
   clear_blinking_leds();
 }
  
-static void start_track_run_mode(void) {
+void start_track_run_mode(void) {
   in_run_mode = TRUE;
   set_led(LED_RS);
   all_rest = all_slide = all_accent = FALSE;
 }
 
-static void stop_track_run_mode(void) {
+void stop_track_run_mode(void) {
   in_run_mode = FALSE;   
   clear_all_leds();
   clear_blinking_leds();
 }
 
-void load_track(uint8_t track_loc) {
+void load_track(uint8_t bank, uint8_t track_loc) {
   uint8_t i;
   uint16_t track_addr;
 
-  track_addr = TRACK_MEM + track_loc*TRACK_SIZE*2;
+  track_addr = TRACK_MEM + (bank*BANK_SIZE + track_loc*TRACK_SIZE)*2;
   for (i=0; i < TRACK_SIZE; i++) {
     track_buff[i] = spieeprom_read(track_addr + 2*i) << 8;
     track_buff[i] |= spieeprom_read(track_addr + 2*i + 1);
   }
 }
 
-void write_track(uint8_t track_loc) {
+void write_track(uint8_t bank, uint8_t track_loc) {
   uint8_t i;
   uint16_t track_addr;
 
-  track_addr = TRACK_MEM + track_loc*TRACK_SIZE;  
+  track_addr = TRACK_MEM + (bank*BANK_SIZE + track_loc*TRACK_SIZE)*2;  
   for (i=0; i < TRACK_SIZE; i++) {
     spieeprom_write(track_buff[i]>>8, track_addr + 2*i);
     spieeprom_write(track_buff[i] & 0xFF, track_addr + 2*i + 1);

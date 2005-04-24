@@ -56,8 +56,7 @@ int midi_getch(void);
 int midi_getchar(void);
 void do_midi_mode(void);
 
-
-
+void init_midi(void);
 
 uint8_t get_midi_addr(void);
 void set_midi_addr(uint8_t a);

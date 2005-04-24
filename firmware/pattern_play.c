@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <avr/interrupt.h>
 #include "pattern.h"
+#include "track.h"
 #include "switch.h"
 #include "led.h"
 #include "main.h"
@@ -50,17 +51,22 @@ extern volatile uint8_t note_counter;
 extern volatile uint8_t dinsync_counter;
 extern volatile int16_t dinsync_clocked, midisync_clocked;
 
+// pattern running info
 extern volatile uint8_t curr_pattern_index;
-extern uint8_t play_loaded_pattern; // are we playing?
 extern volatile uint8_t pattern_buff[PATT_SIZE];    // the 'loaded' pattern buffer
 
-// play a few patterns in sequence...
-volatile uint8_t curr_pattern_chain[MAX_PATT_CHAIN];
-volatile uint8_t curr_pattern_chain_index;
-volatile uint8_t next_pattern_chain[MAX_PATT_CHAIN];
-uint8_t buff_pattern_chain[MAX_PATT_CHAIN];
-uint8_t buff_patt_chain_len = 0;
+// track runnning info
+extern volatile uint8_t curr_track_index;
+extern volatile uint16_t track_buff[TRACK_SIZE]; // the 'loaded' track buffer
 
+// a chain can either hold patterns or tracks (depending on the mode
+volatile uint8_t curr_chain[MAX_CHAIN];
+volatile uint8_t curr_chain_index;
+volatile uint8_t next_chain[MAX_CHAIN];
+uint8_t buff_chain[MAX_CHAIN];
+uint8_t buff_chain_len = 0;
+
+// the currently-playing pitch shift and the upcoming pitch shift
 extern int8_t curr_pitch_shift;
 extern int8_t next_pitch_shift;
 
@@ -78,7 +84,10 @@ volatile uint16_t tap_tempo_timer = 0;
 // could be MIDISYNC, DINSYNC or SYNCOUT
 #define function_changed (function != curr_function)
 
-void do_pattern_play(void) {
+// both pattern and track play are similar enough in function
+// (and codespace is small enough) that they're in the same
+// function. eek
+void do_patterntrack_play(void) {
   uint8_t i = 0, curr_function;
   uint8_t midi_cmd = 0;
   uint8_t midi_data = 0;
@@ -99,25 +108,31 @@ void do_pattern_play(void) {
   clear_all_leds();
   clear_blinking_leds();
   next_bank = curr_bank = bank;
-  next_pattern_chain[0] = curr_pattern_chain[0] = 0;
-  next_pattern_chain[1] = curr_pattern_chain[1] = 0xFF;
+  next_chain[0] = curr_chain[0] = 0;
+  next_chain[1] = curr_chain[1] = 0xFF;
   set_numkey_led(1);
  
   play_loaded_pattern = FALSE;
+  play_loaded_track = FALSE;
+
+  curr_track_index = 0;
   curr_pattern_index = 0;
-  curr_pattern_chain_index = 0;
+
+  curr_chain_index = 0;
+
   curr_pitch_shift = next_pitch_shift = 0;
 
   clear_bank_leds();
-  set_bank_led(bank);
-
-  clock_leds();
+  if (PATTERNPLAY)
+    set_bank_led(bank);
+  else  // TRACKPLAY
+    set_bank_led(bank % 8);   // half as many track banks
 
   while (1) {
     read_switches();
 
     if (function_changed) {
-      playing = 0;
+      playing = FALSE;
 
       dinsync_stop();
       midi_stop();
@@ -146,39 +161,38 @@ void do_pattern_play(void) {
       clear_notekey_leds();
       clear_blinking_leds();
       set_led(LED_CHAIN);
-      buff_patt_chain_len = 0;  // 'start' to write a new chain
+      buff_chain_len = 0;  // 'start' to write a new chain
     }
 
     // releasing the chain key 'finalizes' the chain buffer
     if (just_released(KEY_CHAIN)) {
-      for (i=0; i<MAX_PATT_CHAIN; i++)
-	next_pattern_chain[i] = buff_pattern_chain[i];
+      for (i=0; i<MAX_CHAIN; i++)
+	next_chain[i] = buff_chain[i];
 
       // if we're not playing something right now, curr = next
       if (!playing) {
-	for (i=0; i<MAX_PATT_CHAIN; i++)
-	  curr_pattern_chain[i] = next_pattern_chain[i];
+	for (i=0; i<MAX_CHAIN; i++)
+	  curr_chain[i] = next_chain[i];
 	curr_pitch_shift = next_pitch_shift;
 	clear_led(LED_UP);
 	clear_led(LED_DOWN);
       }
-
       clear_led(LED_CHAIN);
     }
 
     if (is_pressed(KEY_CHAIN)) {
-      // display the current pattern chain
-      for (i=0; i<buff_patt_chain_len; i++) {
-	if (buff_pattern_chain[i] >= 8)
+      // display the current chain
+      for (i=0; i<buff_chain_len; i++) {
+	if (buff_chain[i] >= 8)
 	  break;
-	set_numkey_led(buff_pattern_chain[i]+1);
+	set_numkey_led(buff_chain[i]+1);
       }
 
-      // ok lets add patterns to the buffer chain!
+      // ok lets add patterns/tracks to the buffer chain!
       i = get_lowest_numkey_just_pressed();
-      if ((i != 0) && (buff_patt_chain_len < MAX_PATT_CHAIN)) {
-	buff_pattern_chain[buff_patt_chain_len++] = i - 1;
-	buff_pattern_chain[buff_patt_chain_len] = 0xFF;
+      if ((i != 0) && (buff_chain_len < MAX_CHAIN)) {
+	buff_chain[buff_chain_len++] = i - 1;
+	buff_chain[buff_chain_len] = 0xFF;
 
 	/*
 	putstring("buffered pattern chain = ");
@@ -254,50 +268,57 @@ void do_pattern_play(void) {
       if ((i != 0) || has_bank_knob_changed()) {
 	if (i != 0) {
 	  clear_numkey_leds();
-	  next_pattern_chain[0] = i - 1;
-	  next_pattern_chain[1] = 0xFF;
+	  next_chain[0] = i - 1;
+	  next_chain[1] = 0xFF;
 	  if (!playing)
-	    for (i=0; i<MAX_PATT_CHAIN; i++) 
-	      curr_pattern_chain[i] = next_pattern_chain[i];
+	    for (i=0; i<MAX_CHAIN; i++) 
+	      curr_chain[i] = next_chain[i];
 	} else {
-	  next_bank = bank;
+	  if (PATTERNPLAY)
+	    next_bank = bank;
+	  else
+	    next_bank = bank%8;
+
 	  if (!playing)
-	    curr_bank = bank;
+	    curr_bank = next_bank;
 	}
 	if (!playing) {
 	  clear_bank_leds();
-	  set_bank_led(bank);
+	  set_bank_led(next_bank);
 	  curr_pitch_shift = next_pitch_shift;
 	}
       }
       
       // indicate current pattern & next pattern & shift 
-      if (!chains_equiv(next_pattern_chain, curr_pattern_chain)) {
-	if (next_pattern_chain[1] == 0xFF && curr_pattern_chain[1] == 0xFF) {
+      if (!chains_equiv(next_chain, curr_chain)) {
+	if (next_chain[1] == END_OF_CHAIN && curr_chain[1] == END_OF_CHAIN) {
 	  // basically single patterns. current blinks
-	  set_numkey_led_blink(curr_pattern_chain[0]+1);
+	  set_numkey_led_blink(curr_chain[0]+1);
 	}
 
 	// otherwise, always just show the next chain in all solid lights
-	for (i=0; i<MAX_PATT_CHAIN; i++) {
-	  if (next_pattern_chain[i] > 8)
+	for (i=0; i<MAX_CHAIN; i++) {
+	  if (next_chain[i] > 8)
 	    break;
-	  set_numkey_led(next_pattern_chain[i] + 1);
+	  set_numkey_led(next_chain[i] + 1);
 	}
       } else {
-	for (i=0; i<MAX_PATT_CHAIN; i++) {
-	  if (curr_pattern_chain[i] > 8)
+	for (i=0; i<MAX_CHAIN; i++) {
+	  if (curr_chain[i] > 8)
 	    break;
-	  if (playing && (curr_pattern_chain[i] == curr_pattern_chain[curr_pattern_chain_index])) {
-	    if (! is_numkey_led_blink(curr_pattern_chain[i]+1) ) 
+	  if (playing && (curr_chain[i] == curr_chain[curr_chain_index])) {
+	    if (! is_numkey_led_blink(curr_chain[i]+1) ) 
 	      {
-		clear_numkey_led(curr_pattern_chain[i]+1);
-		set_numkey_led_blink(curr_pattern_chain[i]+1); // if playing, current pattern blinks
+		// if playing, current pattern/track blinks
+		clear_numkey_led(curr_chain[i]+1);
+		set_numkey_led_blink(curr_chain[i]+1); 
 	      }
 	  } else {
-	    if (is_numkey_led_blink(curr_pattern_chain[i]+1))
+	    // clear old blinking tracks/patterns
+	    if (is_numkey_led_blink(curr_chain[i]+1))
 	      clear_blinking_leds();
-	    set_numkey_led(curr_pattern_chain[i] + 1);  // all other patterns in chain solid
+	    // all other patterns in chain solid
+	    set_numkey_led(curr_chain[i] + 1); 
 	  }
 	}
       }
@@ -346,8 +367,7 @@ void do_pattern_play(void) {
 	 ((sync == DIN_SYNC) && dinsync_stopped()) ) 
       {
 	//putstring("stop\n\r");
-	playing = 0;
-	play_loaded_pattern = 0;
+	playing = FALSE;
 	note_off(0);
 	midi_stop();
 	if (sync != DIN_SYNC) 
@@ -366,7 +386,11 @@ void do_pattern_play(void) {
 	set_led(LED_RS);
 	//putstring("start\n\r");
 
-	load_pattern(bank, curr_pattern_chain[0]);
+	if (PATTERNPLAY)
+	  load_pattern(bank, curr_chain[0]);
+	else
+	  load_track(bank%8, curr_chain[0]);
+ 
 	/*
 	  putstring("next pattern (bank ");
 	  putnum_ud(bank);
@@ -377,12 +401,12 @@ void do_pattern_play(void) {
 	
 	// on midisync continue message, continue!
 	if (! ((sync == MIDI_SYNC) && (midi_cmd == MIDI_CONTINUE))) {
-	  curr_pattern_chain_index = 0;  // index into current chain
+	  curr_chain_index = 0;  // index into current chain
 	  curr_pattern_index = 0;        // index into current pattern in chain
+	  curr_track_index = 0;        // index into current pattern in chain
 	}
 	
-	play_loaded_pattern = 1;
-	playing = 1;
+	playing = TRUE;
 	note_counter = 0;
 	midisync_clocked = 0;
 	dinsync_counter = 0;
@@ -421,7 +445,7 @@ void do_pattern_play(void) {
 uint8_t chains_equiv(volatile uint8_t *chain1, volatile uint8_t *chain2) {
   uint8_t i;
   
-  for (i=0; i < MAX_PATT_CHAIN; i++) {
+  for (i=0; i < MAX_CHAIN; i++) {
     if (chain1[i] != chain2[i])
       return FALSE;
     if (chain1[i] == 0xFF) 

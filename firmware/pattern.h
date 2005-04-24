@@ -31,7 +31,7 @@
  */
 
 void do_pattern_edit(void);
-void do_pattern_play(void);
+void do_patterntrack_play(void);
 
 
 void load_pattern(uint8_t bank, uint8_t patt_location);
@@ -51,6 +51,7 @@ uint8_t chains_equiv(volatile uint8_t *chain1, volatile uint8_t *chain2);
 #define PATT_SIZE 16 // bytes
 #define PATTERN_MEM 0x0
 
-#define MAX_PATT_CHAIN 32   // hell, make this 100 if you want.
+#define MAX_CHAIN 32   // hell, make this 100 if you want.
 
 #define END_OF_PATTERN 0xFF
+#define END_OF_CHAIN 0xFF

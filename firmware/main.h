@@ -56,6 +56,9 @@
 #define cbi(p,b) (p) &= ~(1<<(b))
 #endif
 
+#define ANYPATTERNPLAYFUNC ((function == PLAY_PATTERN_FUNC) || (function == PLAY_PATTERN_MIDISYNC_FUNC) || (function ==PLAY_PATTERN_DINSYNC_FUNC))
+#define ANYTRACKPLAYFUNC ((function == PLAY_TRACK_FUNC) || (function == PLAY_TRACK_MIDISYNC_FUNC) || (function == PLAY_TRACK_DINSYNC_FUNC))
+
 /************* function prototypes */
 void ioinit(void);
 void putstring(char *str);
