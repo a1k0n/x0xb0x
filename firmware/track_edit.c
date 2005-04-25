@@ -216,7 +216,7 @@ void do_track_edit(void) {
 	*/
 
 	// get the pattern's RAS & pitch shift
-	load_curr_patt();
+	curr_pitch_shift = load_curr_patt();
 
 	// start playing from beginning of pattern
 	curr_pattern_index = 0;
@@ -410,8 +410,7 @@ void start_track_run_mode(void) {
     curr_note = REST; // make it a rest just to avoid sliding
 
     // load the first pattern
-    load_curr_patt();
-
+    curr_pitch_shift = load_curr_patt();
     
     // wait for the tempo interrupt to be ready for a note-on
     while (note_counter & 0x1);
@@ -425,15 +424,17 @@ void start_track_run_mode(void) {
 
 // a shortcut function...this code is duplicated a bunch of places.
 // this just saves codespace
-void load_curr_patt(void) {
+uint8_t load_curr_patt(void) {
   // load the pattern from EEPROM
   load_pattern((curr_patt >> 3) & 0xF, curr_patt & 0x7);
-    
+  
   // get the pattern's RAS & pitch shift
   all_rest = (curr_patt & TRACK_REST_FLAG) >> 8;
   all_accent = (curr_patt & TRACK_ACCENT_FLAG) >> 8;
   all_slide = (curr_patt & TRACK_SLIDE_FLAG) >> 8;
-  curr_pitch_shift = get_pitchshift_from_patt(curr_patt);
+  curr_pattern_index = 0;
+
+  return get_pitchshift_from_patt(curr_patt);
 }
 
 void stop_track_run_mode(void) {

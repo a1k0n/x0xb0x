@@ -351,15 +351,12 @@ void load_pattern(uint8_t bank, uint8_t patt_location) {
 
   pattern_addr = PATTERN_MEM + bank*BANK_SIZE + patt_location*PATT_SIZE;
 
-  
   /*
-  putstring("loaded pattern (bank ");
-  putnum_ud(bank);
-  putstring(", loc ");
-  putnum_ud(patt_location);
-  putstring(" from 0x");
+  putstring("load patt ["); 
+  putnum_ud(bank); putstring(", "); putnum_ud(patt_location);
+  putstring(" @ 0x");
   putnum_uh(pattern_addr);
-  putstring("\n\rpattern: ");
+  putstring("\n\r");
   */
 
   for(i=0; i<PATT_SIZE; i++) {
@@ -411,7 +408,7 @@ void write_pattern(uint8_t bank, uint8_t patt_location) {
 }
 
 void start_runwrite_mode() {
-  putstring("start runwrite\n\r");
+  //putstring("start runwrite\n\r");
   curr_pattern_index = 0;
   in_runwrite_mode = 1;
   set_led(LED_RS); 
@@ -422,7 +419,7 @@ void start_runwrite_mode() {
 }
 
 void stop_runwrite_mode() {
-  putstring("stop runwrite\n\r");
+  //putstring("stop runwrite\n\r");
   turn_off_tempo();
   play_loaded_pattern = 0;
   clear_key_leds();
@@ -437,7 +434,7 @@ void stop_runwrite_mode() {
 
 
 void start_stepwrite_mode() {
-  putstring("start stepwrite\n\r");
+  //putstring("start stepwrite\n\r");
   in_stepwrite_mode = 1;
   set_led(LED_NEXT); 
   clear_bank_leds();
@@ -447,7 +444,7 @@ void start_stepwrite_mode() {
 }
 
 void stop_stepwrite_mode() {
-  putstring("stop stepwrite\n\r");
+  //putstring("stop stepwrite\n\r");
   in_stepwrite_mode = 0;
   clear_led(LED_NEXT); 
   clear_key_leds();

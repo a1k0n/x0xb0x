@@ -162,7 +162,7 @@ void do_tempo(void) {
 	    // dont load the pattern, but make sure the pattern buffer wont play
 	    pattern_buff[0] = END_OF_PATTERN;
 	  } else {
-	    load_curr_patt();
+	    curr_pitch_shift = load_curr_patt();
 	    clear_bank_leds();
 	  }
 	}
@@ -242,49 +242,58 @@ void do_tempo(void) {
 	  note_off(((curr_note>>7) & 0x1) | all_slide); // slide
 	}
 	if ((curr_note & 0x3F) != 0)  // not rest
-	  midi_send_note_off(curr_note + curr_pitch_shift);
+	  midi_send_note_off(curr_note + 
+			     curr_pitch_shift + 
+			     get_pitchshift_from_patt(curr_patt));
 	else
 	  midi_send_note_off(curr_note);
 
-	// last note of this pattern?
+	// if this is the last note in the pattern, go to the next in track
 	if ((curr_pattern_index >= PATT_SIZE) || 
-	    (pattern_buff[curr_pattern_index] == 0xFF)) {
-
+	    (pattern_buff[curr_pattern_index] == END_OF_PATTERN)) {
 	  curr_pattern_index = 0;          // start next pattern in track
-	  curr_track_index++;
 
+	  // if this is the end of the track, go to the next one in the chain
+	  if ((curr_track_index >= TRACK_SIZE) ||
+	      (track_buff[curr_track_index] == END_OF_TRACK)) {
+	    curr_track_index = 0;
 
-	  curr_chain_index++;      // go to next track in chain
-	  // last pattern in this chain?
-	  if ((curr_chain_index >= MAX_CHAIN) ||
-	      (curr_chain[curr_chain_index] == 0xFF)) {
-	    curr_chain_index = 0;
+	    curr_chain_index++;      // go to next track in chain
+	    // last pattern in this chain, go to next chain
+	    if ((curr_chain_index >= MAX_CHAIN) ||
+		(curr_chain[curr_chain_index] == 0xFF)) {
+	      curr_chain_index = 0;
+		
+	      if (!chains_equiv(next_chain, curr_chain) ||
+		  (curr_bank != next_bank)) {
+		
+		// copy next pattern chain into current pattern chain
+		for (i=0; i<MAX_CHAIN; i++) 
+		  curr_chain[i] = next_chain[i];
+
+		// reset the pitch
+		next_pitch_shift = curr_pitch_shift = 0;
+
+		clear_notekey_leds();
+		clear_blinking_leds();
+	      }
+	      //putnum_ud(next_pitch_shift);
+	      curr_bank = next_bank;
+	      curr_pitch_shift = next_pitch_shift;
+
+	    } else {
+	      curr_chain_index++;
+	    }
+	    load_track(curr_bank, curr_chain[curr_chain_index]);
+	  } else {
+	    curr_track_index++;
 	  }
-	  
-	  if (!chains_equiv(next_chain, curr_chain) ||
-	      (curr_bank != next_bank)) {
-
-	    // copy next pattern chain into current pattern chain
-	    for (i=0; i<MAX_CHAIN; i++) 
-	      curr_chain[i] = next_chain[i];
-	    
-	    curr_chain_index = 0;  // reset to beginning
-
-	    // reset the pitch
-	    next_pitch_shift = curr_pitch_shift = 0;
-
-	    clear_notekey_leds();
-	    clear_blinking_leds();
-	  }
-	  
-	  curr_bank = next_bank;
-	  curr_pitch_shift = next_pitch_shift;
-
-	  load_pattern(curr_bank, curr_chain[curr_chain_index]);
+	  curr_patt = track_buff[curr_track_index];
+	  load_curr_patt();
 	}
       }
       break;
-
+      
     }
   } else {
     switch(function) {
@@ -378,10 +387,11 @@ void do_tempo(void) {
 	    curr_note &= 0xC0;
 
 	  if ((curr_note & 0x3F) != 0) { // not rest
-	    note_on( (curr_note & 0x3F) + curr_pitch_shift,
+	    note_on( (curr_note & 0x3F) + curr_pitch_shift + 
+		     get_pitchshift_from_patt(curr_patt),
 		     (prev_note >> 7) | all_slide,  // slide is from prev note!
 		     ((curr_note>>6) & 0x1) | all_accent);       // accent
-	    midi_send_note_on(curr_note + curr_pitch_shift);
+	    midi_send_note_on(curr_note + curr_pitch_shift + get_pitchshift_from_patt(curr_patt));
 	  }
 	  else {
 	    note_on( (curr_note & 0x3F),
@@ -495,50 +505,50 @@ int main(void) {
     read_switches();
     switch (function) {
     case COMPUTER_CONTROL_FUNC:
-      putstring("CompControl\n\r");
+      //putstring("CompControl\n\r");
       do_computer_control();
       break;
     case EDIT_PATTERN_FUNC:
-      putstring("PattEdit\n\r");
+      //putstring("PattEdit\n\r");
       do_pattern_edit();
       break;
     case PLAY_PATTERN_FUNC:
-      putstring("PattPlay\n\r");
+      //putstring("PattPlay\n\r");
       sync = INTERNAL_SYNC;
       do_patterntrack_play();
       break;
     case PLAY_PATTERN_DINSYNC_FUNC:
-      putstring("PattPlay DINSYNC\n\r");
+      //putstring("PattPlay DINSYNC\n\r");
       sync = DIN_SYNC;
       do_patterntrack_play();
       break;
     case PLAY_PATTERN_MIDISYNC_FUNC:
-      putstring("PattPlay MidiSYNC\n\r");
+      //putstring("PattPlay MidiSYNC\n\r");
       sync = MIDI_SYNC;
       do_patterntrack_play();
       break;
     case EDIT_TRACK_FUNC:
-      putstring("TrackEdit\n\r");
+      //putstring("TrackEdit\n\r");
       do_track_edit();
       break;
     case PLAY_TRACK_FUNC:
-      putstring("TrackPlay\n\r");
+      //putstring("TrackPlay\n\r");
       sync = INTERNAL_SYNC;
       do_patterntrack_play();
       break;
     case MIDI_CONTROL_FUNC:
       sync = INTERNAL_SYNC;
-      putstring("MIDIControl\n\r");
+      //putstring("MIDIControl\n\r");
       do_midi_mode();
       break;
     case KEYBOARD_MODE_FUNC:
-      putstring("Keyboard\n\r");
+      //putstring("Keyboard\n\r");
       do_keyboard_mode();
       break;
     case RANDOM_MODE_FUNC: {
       //uint8_t dinsync_started = 0; // stopped
       //uint8_t dinsync_lastpulse = 0; // 
-      putstring("rAnD0m\n\r");
+      //putstring("rAnD0m\n\r");
       turn_on_tempo();
       //dinsync_start();
       while (1) {

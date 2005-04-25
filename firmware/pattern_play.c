@@ -54,6 +54,7 @@ extern volatile int16_t dinsync_clocked, midisync_clocked;
 // pattern running info
 extern volatile uint8_t curr_pattern_index;
 extern volatile uint8_t pattern_buff[PATT_SIZE];    // the 'loaded' pattern buffer
+extern uint16_t curr_patt;
 
 // track runnning info
 extern volatile uint8_t curr_track_index;
@@ -69,6 +70,8 @@ uint8_t buff_chain_len = 0;
 // the currently-playing pitch shift and the upcoming pitch shift
 extern int8_t curr_pitch_shift;
 extern int8_t next_pitch_shift;
+
+extern uint8_t curr_note;
 
 uint8_t all_accent = 0;
 uint8_t all_slide = 0;
@@ -107,7 +110,6 @@ void do_patterntrack_play(void) {
 
   clear_all_leds();
   clear_blinking_leds();
-  next_bank = curr_bank = bank;
   next_chain[0] = curr_chain[0] = 0;
   next_chain[1] = curr_chain[1] = 0xFF;
   set_numkey_led(1);
@@ -117,15 +119,19 @@ void do_patterntrack_play(void) {
   curr_track_index = 0;
   curr_pattern_index = 0;
 
+  curr_patt = 0;
+
   curr_chain_index = 0;
 
   curr_pitch_shift = next_pitch_shift = 0;
 
   clear_bank_leds();
   if (ANYPATTERNPLAYFUNC)
-    set_bank_led(bank);
+    next_bank = curr_bank = bank;
   else  // TRACKPLAY
-    set_bank_led(bank % 8);   // half as many track banks
+    next_bank = curr_bank = bank % 8;
+
+  set_bank_led(bank);
 
   while (1) {
     read_switches();
@@ -267,8 +273,9 @@ void do_patterntrack_play(void) {
       if ((i != 0) || has_bank_knob_changed()) {
 	if (i != 0) {
 	  clear_numkey_leds();
-	  next_chain[0] = i - 1;
-	  next_chain[1] = 0xFF;
+	  buff_chain[0] = next_chain[0] = i - 1;
+	  buff_chain[1] = next_chain[1] = 0xFF;
+	  
 	  if (!playing)
 	    for (i=0; i<MAX_CHAIN; i++) 
 	      curr_chain[i] = next_chain[i];
@@ -375,7 +382,10 @@ void do_patterntrack_play(void) {
 	clear_led(LED_RS);
 	clear_blinking_leds();
 	clear_bank_leds();
-	set_bank_led(bank);
+	if (ANYPATTERNPLAYFUNC)	
+	  set_bank_led(bank);
+	else
+	  set_bank_led(bank % 8);
       }
     else if ( ((sync == INTERNAL_SYNC) && just_pressed(KEY_RS) && !playing) ||
 	      ((sync == MIDI_SYNC) && 
@@ -387,9 +397,12 @@ void do_patterntrack_play(void) {
 
 	if (ANYPATTERNPLAYFUNC)
 	  load_pattern(bank, curr_chain[0]);
-	else
+	else {
 	  load_track(bank%8, curr_chain[0]);
- 
+	  curr_patt = track_buff[0];
+	  load_curr_patt(); // ignore pitch shift returned
+	}
+	curr_note = REST;
 	/*
 	  putstring("next pattern (bank ");
 	  putnum_ud(bank);
@@ -405,11 +418,11 @@ void do_patterntrack_play(void) {
 	  curr_track_index = 0;        // index into current pattern in chain
 	}
 	
-	playing = TRUE;
 	note_counter = 0;
 	midisync_clocked = 0;
 	dinsync_counter = 0;
 	dinsync_clocked = 0;
+	playing = TRUE;
 	midi_putchar(MIDI_START);
 	if (sync != DIN_SYNC)
 	  dinsync_start();

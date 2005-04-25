@@ -46,7 +46,7 @@ void write_track(uint8_t bank, uint8_t track_loc);
 void display_curr_pitch_shift_ud(void);
 int8_t get_pitchshift_from_patt(uint16_t patt);
 
-void load_curr_patt(void);
+uint8_t load_curr_patt(void);
 
 #define TRACK_REST_FLAG    0x8000UL
 #define TRACK_ACCENT_FLAG  0x4000UL
