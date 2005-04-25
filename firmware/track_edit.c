@@ -50,7 +50,7 @@ extern uint8_t function, bank;
 volatile uint8_t curr_track_index;
 uint8_t play_loaded_track;
 uint16_t curr_patt;
-uint8_t track_location;
+uint8_t track_location, track_bank;
 volatile uint16_t track_buff[TRACK_SIZE];
 
 extern volatile uint8_t all_accent, all_slide, all_rest; // all the time
@@ -62,13 +62,18 @@ uint8_t in_stepwrite_mode, in_run_mode;
 
 extern uint8_t sync;
 
+extern volatile uint8_t curr_note;
+extern volatile uint8_t note_counter;
+
 void do_track_edit(void) {
-  uint8_t i, prev_track_index = -1;
+  uint8_t i;
 
   turn_on_tempo();
 
   // initialize
-  track_location = bank;
+  track_bank = bank % 8;
+  track_location = 0;
+
   in_stepwrite_mode = FALSE;
   in_run_mode = FALSE;
   play_loaded_track = FALSE;
@@ -76,8 +81,6 @@ void do_track_edit(void) {
   curr_track_index = 0;
   curr_patt = END_OF_TRACK;
   sync = INTERNAL_SYNC;
-
-  track_location = -1;
 
   clear_bank_leds();
   clear_blinking_leds();
@@ -101,28 +104,53 @@ void do_track_edit(void) {
       return;
     }
     
+    // this is when they select which bank (1-8)& position(1-8)
+    // for the track to edit
     if (!in_stepwrite_mode && !in_run_mode) {
-      // this is when they select which track to edit (1-16)
-      if (track_location != bank) {
-	track_location = bank;
-	//load_track(track_location);
+      if (has_bank_knob_changed()) {
+	//putstring("changed track bank\n\r");
+	track_bank = bank % 8;
+	load_track(track_bank, track_location);
 	clear_bank_leds();  // track changed, clear the prev indicator
       }
-      set_bank_led(track_location);  // show the track being edited
-    } else {
-      // in stepwrite/run mode
-
-      // track position changed, clear blinking LEDs and show new position
-      if (prev_track_index != curr_track_index) {
-	prev_track_index = curr_track_index;
-	clear_blinking_leds();
+      set_bank_led(track_bank);  // show the track being edited
+      
+      i = get_lowest_numkey_pressed(); 
+      if (i != 0) {
+	clear_notekey_leds();
+	track_location = i-1;
+	load_track(track_bank, track_location);
       }
-      set_bank_led_blink(curr_track_index);  // show the current position in the edited track
+      set_numkey_led(track_location+1);
+    }
+
+    // if they hit run/stop, play the track in 
+    if (just_pressed(KEY_RS)) {
+      if (in_run_mode) {
+	stop_track_run_mode(); 	// stop run mode
+      } else {
+	// stop stepwrite mode
+	if (in_stepwrite_mode) {
+	  stop_track_stepwrite_mode();
+	}
+	start_track_run_mode();
+      }
+    }
+
+    // do common stuff for both run and stepwritemode
+    // ie. blink the bank led for the track index
+    // show the current pattern's bank in the bank leds
+    // show RAS leds, or DONE if end of track
+    if (in_run_mode || in_stepwrite_mode) {
+      // show the current position in the edited track
+      if (!is_bank_led_blink(curr_track_index))
+	clear_blinking_leds();
+      set_bank_led_blink(curr_track_index); 
 
       if (curr_patt == END_OF_TRACK) {
 	clear_note_leds();
-
-	set_led(LED_DONE);                   // the 'end of track' (0xFFFF) lights up DONE
+	// the 'end of track' (0xFFFF) lights up DONE
+	set_led(LED_DONE);
       } else {
 	clear_led(LED_DONE);                 // make sure DONE isn't on anymore
 	set_bank_led((curr_patt >> 3) & 0xF);    // show the bank of the current pattern
@@ -144,7 +172,9 @@ void do_track_edit(void) {
 	  clear_led(LED_SLIDE);
       }
     }
-    
+	  
+    // handle both incrementing/decrementing the track index in stepwrite
+    // as well as starting stepwrite
     if ((just_pressed(KEY_NEXT) || just_pressed(KEY_PREV)) && !in_run_mode) {
       note_off(0);  // if something -was- playing, kill it
 
@@ -156,7 +186,7 @@ void do_track_edit(void) {
 	    curr_track_index = 0;   // got to the end of the track, loop back to beginning
 	  else
 	    curr_track_index++;
-	} else {
+	} else {  // just pressed key prev
 	  // step backwards in the track
 	  if (curr_track_index == 0) {
 	    // search thru the buffer -forward- to find the EOT
@@ -168,79 +198,54 @@ void do_track_edit(void) {
 	  }
 	}
       } else if (just_pressed(KEY_NEXT)) {
-	// starting stepwrite mode
+	// not in stepwrite mode, starting stepwrite mode
 	start_track_stepwrite_mode();
 	curr_track_index = 0;
       }
       
       // grab the current pattern in the track
       curr_patt = track_buff[curr_track_index];
-      if (curr_patt == END_OF_TRACK) {
-	play_loaded_pattern = FALSE;      // clearly, dont play the pattern if its EOT marker
-      } else {
+      
+      play_loaded_pattern = FALSE; 
+
+      if (curr_patt != END_OF_TRACK) {
 	/*
 	  putstring("curr patt = loc "); putnum_ud(curr_patt & 0x7);
 	  putstring(" in bank "); putnum_ud(curr_patt>>3 & 0xF);
 	  putstring("\n\r");
 	*/
-	load_pattern((curr_patt >> 3) & 0xF, curr_patt & 0x7);   // grab the pattern from EEPROM
+
 	// get the pattern's RAS & pitch shift
-	all_rest = (curr_patt & TRACK_REST_FLAG) >> 8;
-	all_accent = (curr_patt & TRACK_ACCENT_FLAG) >> 8;
-	all_slide = (curr_patt & TRACK_SLIDE_FLAG) >> 8;
-	curr_pitch_shift = get_pitchshift_from_patt(curr_patt);
+	load_curr_patt();
 
-	curr_pattern_index = 0;                                  // start playing from beginning
-	play_loaded_pattern = TRUE;                              // this will tell the tempo interrupt
-	                                                         // to start playing the pattern
-	clear_notekey_leds();
-	clear_bank_leds();
+	// start playing from beginning of pattern
+	curr_pattern_index = 0;
+	// wait for the next 'note on'
+	while (note_counter & 0x1);
+
+	// tell the tempo interrupt to start playing the pattern on loop
+	play_loaded_pattern = TRUE;
       }
-    }
-
-    if (just_pressed(KEY_RS)) {
-      if (in_run_mode) {
-	// stop run mode
-	stop_track_run_mode();
-	play_loaded_pattern = FALSE; 
-	play_loaded_track = FALSE;
-	note_off(0);
-      } else {
-	// stop stepwrite mode
-	if (in_stepwrite_mode) {
-	  stop_track_stepwrite_mode();
-	  play_loaded_pattern = FALSE; 
-	  note_off(0);
-	}
-
-	start_track_run_mode();
-
-	if (track_buff[0] == END_OF_TRACK) {
-	  play_loaded_pattern = play_loaded_track = FALSE; 
-	  // clearly, dont play the track if there aint no data
-	} else {
-	  // basically tell it to start at the end so its forced to reload the track
-	  curr_track_index = -1;
-	  curr_pattern_index = PATT_SIZE;
-	  curr_patt = 0xFFFF;
-	  // get the tempo interrupt to start playing
-	  play_loaded_track = TRUE;
-	}
-      }
-    }
-
-    if (just_pressed(KEY_DONE)) {
-      if (in_stepwrite_mode) {
-	if (curr_track_index+1 < TRACK_SIZE)
-	  track_buff[curr_track_index+1] = END_OF_TRACK;         // set an EOT marker if necc.
-	curr_patt = END_OF_TRACK;  // cleans up LEDs
-	stop_track_stepwrite_mode();                             // stop the mode, and any playing
-	play_loaded_pattern = FALSE;
-	clear_led(LED_DONE);
-      }
-      //write_track(track_location);                               // and write it to memory
     }
   
+    // cope with saving the current buffer and quitting step mode if in it
+    if (just_pressed(KEY_DONE)) {
+      if (in_stepwrite_mode) {
+	if (curr_track_index+1 < TRACK_SIZE) {
+	  // set an EOT marker if necc.
+	  track_buff[curr_track_index+1] = END_OF_TRACK;
+	}
+	curr_patt = END_OF_TRACK;              // cleans up LEDs
+	// stop the mode, and any playing
+	stop_track_stepwrite_mode();           
+	clear_led(LED_DONE);
+      }
+      // and write it to memory
+      write_track(track_bank, track_location); 
+    }
+  
+    // deal with specifics for stepwrite mode:
+    // changing the track's patterns, RAS and pitchshift changes
     if (in_stepwrite_mode) {
       if (curr_patt != END_OF_TRACK) {
 	// handle RAS keypresses -> modifications to current pattern
@@ -294,38 +299,56 @@ void do_track_edit(void) {
 	    curr_pitch_shift = get_pitchshift_from_patt(curr_patt);
 	    set_notekey_led_blink(OCTAVE + curr_pitch_shift);
 	  }
-	} else if (just_released(KEY_UP) || just_released(KEY_DOWN)) {
-	  clear_led(LED_UP);
-	  clear_led(LED_DOWN);
-	  clear_blinking_leds();
+	} else {
+	  if (just_released(KEY_UP) || just_released(KEY_DOWN)) {
+	    // clear up LEDs if not shifting
+	    clear_led(LED_UP);
+	    clear_led(LED_DOWN);
+	    clear_blinking_leds();
+	  }
 	}
-
-	set_numkey_led((curr_patt & 0x7) +1);    // show the location of the current pattern
-	display_curr_pitch_shift_ud();
       }
       
-      // see if they changed the bank / pressed numkey -> change current pattern
-      i = get_lowest_numkey_just_pressed();
-      if ((i != 0) || has_bank_knob_changed()) {
-	clear_numkey_leds();
-	clear_bank_leds();
-	if (i == 0) {
-	  if (curr_patt == END_OF_TRACK)
-	    i = 0;
-	  else
-	    i = curr_patt & 0x7;
-	} else {
-	  i--;
+      // see if they changed the bank / pressed numkey
+      //    -> change current pattern
+      if (! (is_pressed(KEY_UP) || is_pressed(KEY_DOWN))) {
+	i = get_lowest_numkey_just_pressed();
+	if ((i != 0) || has_bank_knob_changed()) {
+	  clear_numkey_leds();
+	  clear_bank_leds();
+	  if (i == 0) {
+	    if (curr_patt == END_OF_TRACK)
+	      i = 0;
+	    else
+	      i = curr_patt & 0x7;
+	  } else {
+	    i--;
+	  }
+	  play_loaded_pattern = FALSE;
+	  note_off(0);
+	  curr_patt = (bank << 3) | i;
+	  track_buff[curr_track_index] = curr_patt;
+	  load_pattern(bank, i);
+	  curr_pattern_index = 0;
+	  all_rest = all_accent = all_slide = FALSE;
+	  curr_pitch_shift = 0;
+	  play_loaded_pattern = TRUE;
 	}
-	note_off(0);
-	curr_patt = (bank << 3) | i;
-	track_buff[curr_track_index] = curr_patt;
-	load_pattern(bank, i);
-	curr_pattern_index = 0;
-	all_rest = all_accent = all_slide = FALSE;
-	curr_pitch_shift = 0;
-	play_loaded_pattern = TRUE;
+
+	// while we're at it, show the pitch shift
+	display_curr_pitch_shift_ud();
+	  
+	// show the pattern location and pattern bank
+	set_single_numkey_led((curr_patt & 0x7) + 1);
       }
+    }
+
+    if (in_run_mode) {
+	// while we're at it, show the pitch shift
+	display_curr_pitch_shift_ud();
+	  
+	// show the pattern location and pattern bank
+	set_single_numkey_led((curr_patt & 0x7) + 1);
     }
   }
 }
@@ -356,6 +379,8 @@ void display_curr_pitch_shift_ud(void) {
 
 void start_track_stepwrite_mode(void) {
   in_stepwrite_mode = TRUE;
+  set_led(LED_NEXT);
+  clear_bank_leds();
 }
 
 
@@ -364,18 +389,61 @@ void stop_track_stepwrite_mode(void) {
   clear_led(LED_NEXT);
   clear_all_leds();
   clear_blinking_leds();
+  play_loaded_pattern = FALSE; 
+  note_off(0);
 }
  
 void start_track_run_mode(void) {
   in_run_mode = TRUE;
   set_led(LED_RS);
   all_rest = all_slide = all_accent = FALSE;
+
+  play_loaded_pattern = play_loaded_track = FALSE; 
+
+  // theres a little bit of setup to get the track buffer playing
+  curr_patt = track_buff[0];
+  if (curr_patt != END_OF_TRACK) {     // clearly, dont play the track if there aint no data in it
+
+    // begin at the first pattern, first note
+    curr_track_index = 0;
+    curr_pattern_index = 0;
+    curr_note = REST; // make it a rest just to avoid sliding
+
+    // load the first pattern
+    load_curr_patt();
+
+    
+    // wait for the tempo interrupt to be ready for a note-on
+    while (note_counter & 0x1);
+
+    // get the tempo interrupt to start playing
+    play_loaded_track = TRUE;
+    //putstring("\n\raccent = ");putnum_ud(all_accent);
+  }
+  clear_bank_leds();
+}
+
+// a shortcut function...this code is duplicated a bunch of places.
+// this just saves codespace
+void load_curr_patt(void) {
+  // load the pattern from EEPROM
+  load_pattern((curr_patt >> 3) & 0xF, curr_patt & 0x7);
+    
+  // get the pattern's RAS & pitch shift
+  all_rest = (curr_patt & TRACK_REST_FLAG) >> 8;
+  all_accent = (curr_patt & TRACK_ACCENT_FLAG) >> 8;
+  all_slide = (curr_patt & TRACK_SLIDE_FLAG) >> 8;
+  curr_pitch_shift = get_pitchshift_from_patt(curr_patt);
 }
 
 void stop_track_run_mode(void) {
   in_run_mode = FALSE;   
+  play_loaded_pattern = FALSE;
+  play_loaded_track = FALSE;
+  note_off(0);
   clear_all_leds();
   clear_blinking_leds();
+  has_bank_knob_changed();
 }
 
 void load_track(uint8_t bank, uint8_t track_loc) {
@@ -383,6 +451,15 @@ void load_track(uint8_t bank, uint8_t track_loc) {
   uint16_t track_addr;
 
   track_addr = TRACK_MEM + (bank*BANK_SIZE + track_loc*TRACK_SIZE)*2;
+
+  /*
+  putstring("reading track ["); 
+  putnum_ud(bank); putstring(", "); putnum_ud(track_loc);
+  putstring(" @ 0x");
+  putnum_uh(track_addr);
+  putstring("\n\r");
+  */
+
   for (i=0; i < TRACK_SIZE; i++) {
     track_buff[i] = spieeprom_read(track_addr + 2*i) << 8;
     track_buff[i] |= spieeprom_read(track_addr + 2*i + 1);
@@ -394,6 +471,15 @@ void write_track(uint8_t bank, uint8_t track_loc) {
   uint16_t track_addr;
 
   track_addr = TRACK_MEM + (bank*BANK_SIZE + track_loc*TRACK_SIZE)*2;  
+
+  /*
+  putstring("write track ["); 
+  putnum_ud(bank); putstring(", "); putnum_ud(track_loc);
+  putstring(" @ 0x");
+  putnum_uh(track_addr);
+  putstring("\n\r");
+  */
+
   for (i=0; i < TRACK_SIZE; i++) {
     spieeprom_write(track_buff[i]>>8, track_addr + 2*i);
     spieeprom_write(track_buff[i] & 0xFF, track_addr + 2*i + 1);

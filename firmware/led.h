@@ -47,6 +47,7 @@ uint8_t is_led_blink(uint8_t num);
 void set_bank_led(uint8_t num);
 void set_bank_led_blink(uint8_t num);
 void clear_bank_leds(void);
+uint8_t is_bank_led_blink(uint8_t num);
 
 void set_key_led(uint8_t num);
 void set_key_led_blink(uint8_t num);

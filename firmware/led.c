@@ -165,10 +165,27 @@ void set_bank_led(uint8_t num) {
   set_led(bank_led_tab[num]);
 }
 
+/*
+void set_single_bank_led(uint8_t num) {
+  uint8_t i;
+  for (i=0; i<16; i++)
+    if (num == i)
+      set_led(bank_led_tab[num]);
+    else
+      clear_led(bank_led_tab[num]);
+}
+*/
+
 void set_bank_led_blink(uint8_t num) {
   if (num >= 16)
     return;
   set_led_blink(bank_led_tab[num]);
+}
+
+uint8_t is_bank_led_blink(uint8_t num){ 
+  if (num >= 16)
+    return;
+  return is_led_blink(bank_led_tab[num]);
 }
 
 // key leds (all but tempo/bank)
@@ -202,6 +219,15 @@ void clear_key_leds(void) {
 void set_numkey_led(uint8_t num) {
   if ((num >= 1) && (num <= 8))
     set_led(numkey_led_tab[num-1]);   // num is 1 thru 8
+}
+
+void set_single_numkey_led(uint8_t num) {
+  uint8_t i;
+  for (i=1; i <= 8; i++)
+    if (i == num) 
+      set_led(numkey_led_tab[i-1]);
+    else
+      clear_led(numkey_led_tab[i-1]);
 }
 
 void clear_numkey_led(uint8_t num) {

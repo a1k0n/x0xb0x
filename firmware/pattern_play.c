@@ -77,7 +77,7 @@ uint8_t all_rest = 0; // all the time
 uint8_t curr_bank = 0;
 uint8_t next_bank = 0;
 
-uint8_t playing = FALSE;
+uint8_t playing;
 
 volatile uint16_t tap_tempo_timer = 0;
 
@@ -112,8 +112,7 @@ void do_patterntrack_play(void) {
   next_chain[1] = curr_chain[1] = 0xFF;
   set_numkey_led(1);
  
-  play_loaded_pattern = FALSE;
-  play_loaded_track = FALSE;
+  playing = FALSE;
 
   curr_track_index = 0;
   curr_pattern_index = 0;
@@ -123,7 +122,7 @@ void do_patterntrack_play(void) {
   curr_pitch_shift = next_pitch_shift = 0;
 
   clear_bank_leds();
-  if (PATTERNPLAY)
+  if (ANYPATTERNPLAYFUNC)
     set_bank_led(bank);
   else  // TRACKPLAY
     set_bank_led(bank % 8);   // half as many track banks
@@ -274,7 +273,7 @@ void do_patterntrack_play(void) {
 	    for (i=0; i<MAX_CHAIN; i++) 
 	      curr_chain[i] = next_chain[i];
 	} else {
-	  if (PATTERNPLAY)
+	  if (ANYPATTERNPLAYFUNC)
 	    next_bank = bank;
 	  else
 	    next_bank = bank%8;
@@ -386,7 +385,7 @@ void do_patterntrack_play(void) {
 	set_led(LED_RS);
 	//putstring("start\n\r");
 
-	if (PATTERNPLAY)
+	if (ANYPATTERNPLAYFUNC)
 	  load_pattern(bank, curr_chain[0]);
 	else
 	  load_track(bank%8, curr_chain[0]);

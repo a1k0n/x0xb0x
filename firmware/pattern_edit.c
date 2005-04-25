@@ -138,7 +138,8 @@ void do_pattern_edit(void) {
     }
 
     
-    // if they hit run/stop, load & play the pattern! (until they hit rs again)
+    // if they hit run/stop, play the pattern in scratch! 
+    // (until they hit rs again)
     if (just_pressed(KEY_RS)) {
       if (in_runwrite_mode) {
 	stop_runwrite_mode();

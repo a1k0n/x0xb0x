@@ -162,22 +162,8 @@ void do_tempo(void) {
 	    // dont load the pattern, but make sure the pattern buffer wont play
 	    pattern_buff[0] = END_OF_PATTERN;
 	  } else {
-	    load_pattern((curr_patt >> 3) & 0xF, curr_patt & 0x7);   // grab the pattern from EEPROM
-
-	    // set the pattern's RAS
-	    all_rest = (curr_patt & TRACK_REST_FLAG) >> 8;
-	    all_accent = (curr_patt & TRACK_ACCENT_FLAG) >> 8;
-	    all_slide = (curr_patt & TRACK_SLIDE_FLAG) >> 8;
-
-	    // set the pattern's pitch shift & display it
-	    curr_pitch_shift = get_pitchshift_from_patt(curr_patt);
-	    display_curr_pitch_shift_ud();
-
-	    // show the pattern location and pattern bank
-	    clear_numkey_leds();
-	    set_numkey_led((curr_patt & 0x7) +1 );    // show the location of the current pattern
+	    load_curr_patt();
 	    clear_bank_leds();
-	    set_bank_led((curr_patt >> 3) & 0xF);
 	  }
 	}
       }
@@ -534,6 +520,11 @@ int main(void) {
     case EDIT_TRACK_FUNC:
       putstring("TrackEdit\n\r");
       do_track_edit();
+      break;
+    case PLAY_TRACK_FUNC:
+      putstring("TrackPlay\n\r");
+      sync = INTERNAL_SYNC;
+      do_patterntrack_play();
       break;
     case MIDI_CONTROL_FUNC:
       sync = INTERNAL_SYNC;
