@@ -810,13 +810,9 @@ void ioinit() {
   uint16_t baud = (F_CPU / (16 * UART_BAUDRATE)) - 1;
   
   /* setup the main UART */
-  UCSR1B |= (1<<RXEN1) | (1<<TXEN1);    // read and write
+  UCSR1B |= (1<<RXEN1) | (1<<TXEN1) | (1<<RXCIE1);;    // read and write & intr
   UBRR1L = (uint8_t)baud;               // set baudrate
   UBRR1H = (uint8_t)(baud>>8);
-
-  /* attach the usb UART to stdio */
-  fdevopen(NULL, uart_getchar, 0);   // opens stdin to uart
-  fdevopen(uart_putchar, NULL, 0);   // opens stdout to uart
 
   /* setup the MIDI UART */
   baud = (F_CPU / (16 * MIDI_BAUDRATE)) - 1;

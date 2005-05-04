@@ -31,5 +31,28 @@
  */
 
 void do_computer_control(void);
-void print_menu(void);
+uint8_t calc_CRC8(uint8_t *buff, uint16_t size);
 uint8_t input_uint8(void);
+void send_msg(uint8_t *buff, uint16_t len);
+void send_status(uint8_t stat);
+
+#define PING_MSG 0x01
+#define STATUS_MSG 0x80
+
+#define WR_PATT_MSG 0x10
+#define RD_PATT_MSG 0x11
+#define LOAD_PATT_MSG 0x12
+#define GET_PATT_MSG  0x13
+
+#define WR_TRACK_MSG 0x20
+#define RD_TRACK_MSG 0x21
+#define LOAD_TRACK_MSG 0x12
+#define GET_TRACK_MSG  0x13
+
+#define START_SEQ_MSG 0x30
+#define STOP_SEQ_MSG 0x31
+#define GET_SEQ_MSG 0x32
+#define SET_SYNC_MSG 0x33
+
+#define GET_TEMPO 0x40
+#define SET_TEMPO 0x41

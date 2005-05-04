@@ -58,8 +58,8 @@ extern uint8_t sync;
 
 #define MIDI_Q_SIZE 32
 volatile uint8_t midi_q[MIDI_Q_SIZE];      // cyclic queue for midi msgs
-volatile uint8_t head_idx = 0;
-volatile uint8_t tail_idx = 0;
+volatile static uint8_t head_idx = 0;
+volatile static uint8_t tail_idx = 0;
 
 // interrupt on receive char
 SIGNAL(SIG_USART0_RECV) {
