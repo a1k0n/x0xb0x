@@ -12,7 +12,7 @@ the specifications listed in this document.
 Model <--> Controller Interface
 -------------------------------
 
-The controller can ask the model to:
+The view can ask the model to:
 
 - openSerialPort()  # Perhaps these happen automatically??
 - closeSerialPort()
@@ -28,12 +28,12 @@ The controller can ask the model to:
 - setSync(SYNC)
 
 
-The model can ask the controller to:
+The model can ask the view to:
 
 - updateSerialStatus(STATE)
 - updateSelectedSerialPort(PORT)
 - updateSerialPortName(PORT,NAME)
-- updatePattern(PATTERN)
+- updateCurrentPattern(PATTERN)
 - updateLoc(LOC)
 - updateBank(BANK)
 - updateTempo(TEMPO)

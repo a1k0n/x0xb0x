@@ -25,54 +25,28 @@
 
 #----------------------------------------------------------------------------
 # Name:         Globals.py
-# Purpose:      Global variables for the Pushpin Debugger
+# Purpose:      Global variables 
 #
-# Author:       Michael Broxton and Josh Lifton
+# Author:       Michael Broxton
 #
 # Created:      A long time ago, in a galaxy far, far away...
 # Copyright:    (c) 2004 by MIT Media Laboratory
 #----------------------------------------------------------------------------
 
-#Super Important Information!!!
-CLOCK_TICKS_PER_METER = 5317.0
 
-# Information about packets.
-PACKET_HEADER_SIZE = 8
-PACKET_HEADER_SIZE_WITHOUT_CRCS = 6
-IDE_REQUEST_MESSAGE = '77'
-IDE_DUMP_MESSAGE_SIZE = 62
-OS_HEADER_MESSAGE = 'BB'
-TOF_ELECT_MESSAGE = '55'
-TOF_ANCHOR_MESSAGE = '56'
-IDE_DUMP_MESSAGE = '99'
-SYN_TEST_MESSAGE = 'AA'
-IR_FRAME_START_BYTE = '50'
-REQUEST = IR_FRAME_START_BYTE
-END_REQUEST = '5A'
-DONT_WAIT_FOR_OS = 'CC'
-WAIT_FOR_OS = 'CD'
-ROUTED_REQUEST_MESSAGE = '78'
-ROUTED_REPLY_MESSAGE = '79'
-BEGIN_DATA_HARVEST = '7A'
-SET_COLOR_MESSAGE = '3A'
-SET_LED_STATE_MESSAGE = '3B'
-REBOOT_MESSAGE = '3C'
-SENT_MESSAGE = '3D'
+TRANSPOSE_UP = 1
+TRANSPOSE_DOWN = -1
+TRANSPOSE_NONE = 0
 
-# Addresses all Pushpins know about.
-GLOBALADDRESS = '00'
-IDEADDRESS = 'FF'
-
-# Packet types.
-SYN='00'
-BROADCAST='01'
-ACK='02'
-NAK='03'
+NOTE_REST = 0x00
 
 # Serial port attributes.
 DEFAULT_BAUD_RATE = 19200
-DEFAULT_COMM_PORT = 0
+DEFAULT_COMM_PORT = '/dev/cu.usbserial-3B1'
 DEFAULT_TIMEOUT = 0.5
+
+
+
 DATA_COLLECTION_TIMEOUT = 2
 WAIT_TIME = range(10000)
 TIME_DELAY_FOR_OSSEND = 1.5e-3   # Time delay between bytes when sending the OS
@@ -80,8 +54,6 @@ WINDOZE_TIME_DELAY_FOR_OSSEND = 0.8e-3
 DEFAULT_SPOTLIGHT_SERIALPORT = 0
 DEFAULT_DONGLE_SERIALPORT = 1
 
-SPOTLIGHT = 0
-DONGLE = 1
 
 def hexToSignedInt(hexString) :
     hexString = hexString.upper()

@@ -1,8 +1,6 @@
 #!/bin/env python
 
 #
-# Josh Lifton and Michael Broxton
-# MIT Media Lab
 # Copyright (c) 2002-2004. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
@@ -37,12 +35,11 @@
 
 ## import all of the wxPython GUI package
 from wxPython.wx import *
-import sys
 
 from Globals import *
-from GraphicalInterface import *
 import model
 import controller
+import view
 
 #---------------------------------------------------------------------------
 # Every wxWindows application must have a class derived from wxApp.
@@ -71,26 +68,26 @@ class x0xc0ntr0l_App(wxApp):
     def OnInit(self):
 
         # Create the controller, then the model and the view.
-        self.controller = controller.Controller()
+        c = controller.Controller()
 
         # Create the data model.  this should take care of serial ports
         # and application logic.
-        self.model = model.Model(self.controller)
+        m = model.Model(c)
 
-        # Create an instance of our customized Frame class - the GUI. (this is the view)
-        self.mainWindow = MainWindow(self.controller, -1, "x0xb0x c0ntr0l")
-        self.SetTopWindow(self.mainWindow)
+        # Create the View class and the GUI.
+        v = view.View(c)
 
+        c.setView(v)
+        c.setModel(m)
 
-        # Meme - test out our model class...
-        self.model.testport()
-        
+        m.initialize()
+
         # Return a success flag
         return true
 
 #---------------------------------------------------------------------------
 
 x0x_app = x0xc0ntr0l_App(0)          # Create an instance of the application class
-x0x_app.MainLoop()                  # Tell it to start processing events
+x0x_app.MainLoop()                   # Tell it to start processing events
 
 #----------------------------------------------------------------------------

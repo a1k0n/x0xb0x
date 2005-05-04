@@ -1,0 +1,21 @@
+
+Tab - Move between top level controls
+
+Pattern Edit
+------------
+
+Space  - Set current value to play a note and move to the next pattern note.
+Return - Move to next note in pattern without changing current note
+Arrow Keys - Move around in the pattern edit buffer
+
+When the cursor is in the top row:
+a-g (natural), C,D,F,G,A (sharps) , r (rest) - Select the note of the current column.  Press multiple times in order to cycle through sharps and C1/C2.  The next note in the pattern is selected automatically.  'r' places a rest at the location.
+
+When the cursor is in the bottom row:
+U,D,S,A - Change effect of the current column
+
+
+Pattern Play
+------------
+1-8     - Select Next Pattern
+

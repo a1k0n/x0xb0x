@@ -26,15 +26,12 @@
 #----------------------------------------------------------------------------
 # Name:         Interface.py
 #
-# Purpose:      The graphical front end for the Pushpin Debugger.  This file
-#               contains routines that define the basic GUI layout of the Pushpin
-#               debugger.  This includes menus, the main window, the top button bar,
-#               the status bar, and the log window (which is the bottom half of the
-#               main window.  The only GUI elements not defined in this file are the
-#               function-specific notebook panels.  These are each defined in a seperate
-#               python source file.
+# Purpose:      The graphical front end (the view in the model-view-controller model).
+#               This file contains routines that define the basic GUI layout of the 
+#               This includes menus, the main window, the buttons and controls,
+#               and the status bar.
 #
-# Author:       Michael Broxton and Josh Lifton
+# Author:       Michael Broxton 
 #
 # Created:      A long time ago, in a galaxy far, far away...
 # Copyright:    (c) 2004 by MIT Media Laboratory
@@ -46,7 +43,9 @@
 # the sys package.
 #
 from wxPython.wx import *
+import wx.grid
 from Globals import *
+from PatternGrid import PatternGrid
 
 DEFAULT_MAINWINDOW_SIZE = (600, 542)
 DEFAULT_MAINWINDOW_POS = (150, 150)  # Default position
@@ -57,6 +56,8 @@ DEFAULT_MAINWINDOW_POS = (150, 150)  # Default position
 ID_FILE_EXIT = wxNewId() 
 ID_FILE_ABOUT = wxNewId()
 ID_FIRMWARE_UPLOAD = wxNewId()
+
+ID_RUNSTOP_BUTTON = wxNewId()
 
 ## Create a new frame class, derived from the wxPython Frame.  This is where
 ## the main parts of the GUI are set up -- Specifically, the menus, toolbar
@@ -91,7 +92,7 @@ class MainWindow(wxFrame):
         self.SetupMenubar()
         self.SetupStatusbar()
         self.SetupMainFrame()
-                
+
         #
         # Once everything has been set up, show the frame.
         #
@@ -114,11 +115,11 @@ class MainWindow(wxFrame):
         #
         divider1 = wxStaticLine(self, -1, pos = (15,55), size = (569,1), style = wxLI_HORIZONTAL)
         divider2 = wxStaticLine(self, -1, pos = (15,277), size = (569,1), style = wxLI_HORIZONTAL)
-        divider3 = wxStaticLine(self, -1, pos = (15,414), size = (569,1), style = wxLI_HORIZONTAL)
+        #divider3 = wxStaticLine(self, -1, pos = (15,414), size = (569,1), style = wxLI_HORIZONTAL)
         
         label1 = wxStaticText(self, -1, "Pattern Edit", (20, 64))
         label2 = wxStaticText(self, -1, "Pattern Play", (20, 286))
-        label3 = wxStaticText(self, -1, "Global Parameters", (20, 423))
+        #label3 = wxStaticText(self, -1, "Global Parameters", (20, 423))
 
         #
         # Pattern Edit Section
@@ -144,13 +145,45 @@ class MainWindow(wxFrame):
         pe_button4 = wxButton(self, -1, "Restore", (518, 251), (66, 17))
 
 
-        self.sizer = wxBoxSizer(wxVERTICAL)
-#        self.sizer.Add(self.splitter, 1, wxEXPAND)
-        self.SetSizer(self.sizer)
-        self.SetAutoLayout(1)
-        
+        self.patternGrid = PatternGrid(self)
 
-        
+
+        for i in range(1,17):
+            wxStaticText(self, -1, str(i), (82 + (i-1)*507/16, 111))
+        wxStaticText(self, -1, "Notes:", (24, 138))
+        wxStaticText(self, -1, "Lengths:", (11, 164))
+        wxStaticText(self, -1, "Effects:", (20, 190))
+
+        #
+        # Pattern Play section
+        #
+        pp_grid = wx.grid.Grid(self, -1, (70, 340), (512, 64))
+        pp_grid.CreateGrid(1, 8)
+        pp_grid.SetColLabelSize(0)
+        pp_grid.SetRowLabelSize(0)
+        pp_grid.SetMargins(-100, -100)
+
+        pp_grid.EnableEditing(False)
+        pp_grid.DisableDragGridSize()
+
+        for i in range(0,8):            
+            pp_grid.SetColSize(i, 512/8)
+            pp_grid.SetRowSize(0, 64)
+
+        for i in range(1,9):
+            wxStaticText(self, -1, str(i), (96 + (i-1)*515/8, 318))
+        wxStaticText(self, -1, "Pattern:", (17, 362))
+
+        pp_button1 = wxButton(self, ID_RUNSTOP_BUTTON, "R/S", (75, 413), (66, 17))
+        pp_button1 = wxButton(self, -1, "Load", (518, 413), (66, 17))
+
+        EVT_BUTTON(self, ID_RUNSTOP_BUTTON, self.HandleButtonAction)
+
+        pp_label1 = wxStaticText(self, -1, "Bank:", (436, 415), style = wxALIGN_RIGHT)
+        pp_label1.SetFont(pe_font)
+        pp_label1.SetSize(pp_label1.GetBestSize())
+
+        pp_text1 = wxTextCtrl(self, -1, "1", (476,412), (39,19), style = (wxTE_PROCESS_ENTER))
 
         #
         # Use some sizers to help keep everything in the window nicely proportioned
@@ -177,7 +210,7 @@ class MainWindow(wxFrame):
         menubar.Append(menu, "File")
 
         menu = wxMenu()
-        menu.Append(ID_FIRMWARE_UPLOAD, "Upload firmware...", "Upload a new .HEX file to the x0xb0x firmware")
+        menu.Append(ID_FIRMWARE_UPLOAD, "Upload firmware...\tCTRL-U", "Upload a new .HEX file to the x0xb0x firmware")
         menubar.Append(menu, "Firmware")
 
         self.SetMenuBar(menubar)
@@ -253,7 +286,9 @@ class MainWindow(wxFrame):
         pass  # There are currently no toolbar events to handle.
          
     def HandleButtonAction(self,event):
-        pass  # There are currently no button events to handle.
+        print 'Button messoge received...'
+        if event.GetId() == ID_RUNSTOP_BUTTON:
+            self.controller.sendRunStop()
     
     def HandleMenuAction(self, event):
         if event.GetId() == ID_FILE_ABOUT:
@@ -262,8 +297,20 @@ class MainWindow(wxFrame):
         elif event.GetId() == ID_FILE_EXIT:
             self.Close(true)
 
-    #
-    # ====================== Outlets ============================
-    #
-    def SetStatusBarText(self, string):
-        self.mainWindow.StatusBar.SetStatusText(string, 0)
+        elif event.GetId() == ID_FIRMWARE_UPLOAD:
+            d = wxFileDialog(self, 'Choose a x0xb0x firmware file', style = wxOPEN)
+            d.ShowModal()
+            if len(d.GetPath()) != 0:
+                try:
+                    self.controller.uploadHexfile(d.GetPath())
+                except Exception, e:
+                    errorDialog = wxMessageDialog(self,
+                                                  message = 'The following exception occured while programming the flash memory on the x0xb0x:\n\nException: ' + str(e),
+                                                  caption = 'Firmware Programming Error',
+                                                  style = wxOK)
+                    errorDialog.ShowModal()
+                                                  
+                                                  
+                                           
+
+

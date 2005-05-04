@@ -1,40 +1,73 @@
 
-
+from Globals import *
 import serial
-from AvrProgram import *
+import AvrProgram 
+from pattern import Pattern
 import IntelHexFormat
+from communication import *
 
 class Model:
 
     def __init__(self, controller):
         self.controller = controller
 
-    def testport(self):
-
-        portname = '/dev/cu.usbserial-3B1'
-#        portname = '/dev/cu.modem'
-        baudrate = 19200
+        #
+        # Attempt to open the serial port
+        #
         
+
+    def __del__(self):
+        #
+        # Clean up
+        #
+        self.serialconnection.close()
+
+    #
+    # This function is called once the model, view, and controller have
+    # all been connected in main.py.  This is where most of the
+    # initialization code is carried out.
+    #
+    def initialize(self):
+        #
+        # Attempt to open the serial port.
+        #
         try:
-            print 'Trying to open port ' + portname + ' at ' + str(baudrate) + 'bps'
-            serialconnection = serial.Serial(portname, baudrate)
+            print 'Trying to open port ' + DEFAULT_COMM_PORT + ' at ' + str(DEFAULT_BAUD_RATE) + 'bps'
+            self.serialconnection = serial.Serial(DEFAULT_COMM_PORT, DEFAULT_BAUD_RATE)
+            self.dataLink = DataLink(self.serialconnection)
+            self.controller.updateStatusText('Opened serial port ' + self.serialconnection.portstr + ' at ' + str(DEFAULT_BAUD_RATE) + ' baud.')
         except serial.SerialException, sce:
+            self.controller.updateStatusText('Couldn\'t open serial port!')
             print 'Couldn\'t open.'
-            return false
-        
-        pathtohexfile = '/Users/mbroxton/Documents/Projects and Interests/x0xb0x/firmware/x0xb0x.hex'
-        ihx = IntelHexFormat.IntelHexFile(pathtohexfile)
-        if findAVRBoard(serialconnection) == True:
-            print "Programming!"
+            return None
+
+
+        #
+        # Start with an empty active pattern
+        #
+        self.currentPattern = Pattern('')
+        self.controller.updateCurrentPattern(self.currentPattern)
+
+
+    #
+    # Parse a IHX file and upload it to the bootloader.
+    #
+    def uploadHexfile(self, filename):
+        #
+        # Meme - Add some robust error handling here.
+        #
+        ihx = IntelHexFormat.IntelHexFile(filename)
+        if self.serialconnection and (AvrProgram.findAVRBoard(self.serialconnection) == True):
+
+            controller.updateStatusText('Uploading firmware....')
+
             try:
-                doFlashProgramming(serialconnection, ihx.toByteString())
+                AvrProgram.doFlashProgramming(self.serialconnection, ihx.toByteString())
+                
             except serial.SerialException, e:
-                print 'Programming failed: ' + e.value
+                controller.updateStatusText('Programming failed: ' + e.value)
 
-            
+            controller.updateStatusText('Firmware Upload Complete.')
 
-        serialconnection.close()
-        
-
-
-    
+    def runTest(self):
+        self.dataLink.sendPingMessage()
