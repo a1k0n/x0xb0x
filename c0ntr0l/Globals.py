@@ -33,6 +33,8 @@
 # Copyright:    (c) 2004 by MIT Media Laboratory
 #----------------------------------------------------------------------------
 
+APP_NAME = "x0xb0x c0ontr0l"
+
 
 TRANSPOSE_UP = 1
 TRANSPOSE_DOWN = -1
@@ -68,3 +70,4 @@ def hexToSignedInt(hexString) :
 def opj(path):
     """Convert paths to the platform-specific separator"""
     return apply(os.path.join, tuple(path.split('/')))
+

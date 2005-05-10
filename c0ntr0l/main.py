@@ -66,9 +66,8 @@ class x0xc0ntr0l_App(wxApp):
     # view objects.
     #
     def OnInit(self):
-
         # Create the controller, then the model and the view.
-        c = controller.Controller()
+        c = controller.Controller(self)
 
         # Create the data model.  this should take care of serial ports
         # and application logic.
@@ -81,9 +80,22 @@ class x0xc0ntr0l_App(wxApp):
         c.setModel(m)
 
         m.initialize()
+        v.initialize()
+
+        
+        self.m = m
+        self.c = c
+        self.v = v
 
         # Return a success flag
         return true
+
+    def OnExit(self):
+        # Save the configuration to file and exit.
+        self.v.destroy()
+        self.m.destroy()
+        self.c.destroy()
+
 
 #---------------------------------------------------------------------------
 

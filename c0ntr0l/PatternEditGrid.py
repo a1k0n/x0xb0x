@@ -6,6 +6,8 @@ NOTE_ROW = 0
 GRAPHIC_ROW = 1
 EFFECT_ROW = 2
 
+NOTES_IN_PATTERN = 16
+
 NoteKeymapDict = {'A' : 'A',
                   'B' : 'B',
                   'C' : 'C',
@@ -21,7 +23,7 @@ SharpKeymapDict = { 'A' : 'A#',
                     'F' : 'F#',
                     'G' : 'G#'}
                  
-class PatternGrid(gridlib.Grid):
+class PatternEditGrid(gridlib.Grid):
     
     def __init__(self, parent):
         gridlib.Grid.__init__(self, parent, -1, pos = (70, 130), size = (512, 84))
@@ -66,20 +68,11 @@ class PatternGrid(gridlib.Grid):
         # to itself.
         #
         if evt.KeyCode() == WXK_RETURN:
-            self.MoveRightWithWrap()
+            self.MoveRightWithSpecialWrap()
             handled = True
             
         elif evt.KeyCode() == WXK_BACK:
-            self.DisableCellEditControl()            
-            success = self.MoveCursorLeft(False)
-            if not success:
-                if self.GetGridCursorRow() == NOTE_ROW:
-                    self.SetGridCursor(EFFECT_ROW, 15)
-                elif self.GetGridCursorRow() == GRAPHIC_ROW:
-                    self.SetGridCursor(GRAPHIC_ROW, 15)
-                elif self.GetGridCursorRow() == EFFECT_ROW:
-                    self.SetGridCursor(NOTE_ROW, 15)
-                return
+            self.MoveLeftWithSpecialWrap()
             handled = True
 
         #
@@ -88,24 +81,15 @@ class PatternGrid(gridlib.Grid):
         # side.
         #
         elif evt.KeyCode() == WXK_RIGHT:
-            self.DisableCellEditControl()
-            success = self.MoveCursorRight(False)
-            if not success:
-                self.SetGridCursor(self.GetGridCursorRow(), 0)
+            self.MoveRightWithWrap()
             handled = True
 
         elif evt.KeyCode() == WXK_LEFT:
-            self.DisableCellEditControl()
-            success = self.MoveCursorLeft(False)
-            if not success:
-                self.SetGridCursor(self.GetGridCursorRow(), 15)
+            self.MoveLeftWithWrap()
             handled = True
 
-        elif (evt.KeyCode() == ord('r') or
-              evt.KeyCode() == ord('R')):
-            self.SetCellValue(NOTE_ROW, self.GetGridCursorCol(), ' ')
-            self.SetCellValue(GRAPHIC_ROW, self.GetGridCursorCol(), '0')
-            self.SetCellValue(EFFECT_ROW, self.GetGridCursorCol(), ' ')
+        elif (evt.KeyCode() == ord('r')) or (evt.KeyCode() == ord('R')):
+            self.SetNoteToRest(self.GetGridCursorCol())
             self.MoveRightWithWrap()
             handled = True
             
@@ -155,12 +139,39 @@ class PatternGrid(gridlib.Grid):
             evt.Skip()
         
     def OnGridClick(self, evt):
-        print "Grid click!"
+        if evt.GetRow() == GRAPHIC_ROW:
+            self.SetNoteToRest(evt.GetCol())
         self.SetFocus()
         evt.Skip()
 
+    #
+    # Set a note in the pattern to a rest.  The note is specified
+    # using a zero-based integer index in the range [0, 15]
+    #
+    def SetNoteToRest(self, note):
+        self.SetCellValue(NOTE_ROW, note, ' ')
+        self.SetCellValue(GRAPHIC_ROW, note, '0')
+        self.SetCellValue(EFFECT_ROW, note, ' ')
+
+
     def MoveRightWithWrap(self):
-        self.DisableCellEditControl()            
+        success = self.MoveCursorRight(False)
+        if not success:
+            self.SetGridCursor(self.GetGridCursorRow(), 0)
+
+    def MoveLeftWithWrap(self):
+        success = self.MoveCursorLeft(False)
+        if not success:
+            self.SetGridCursor(self.GetGridCursorRow(), NOTES_IN_PATTERN - 1)
+
+
+    #
+    # The "special" wrap moves the cursor from the note row down to the effect
+    # and from the effect row back up to the note row.  This makes entering patterns
+    # slightly faster and easier, since it saves the pattern writer the time that
+    # would be consumed moving the cursor to the bottom row themselves.
+    #
+    def MoveRightWithSpecialWrap(self):
         success = self.MoveCursorRight(False)
         if not success:
             if self.GetGridCursorRow() == NOTE_ROW:
@@ -170,6 +181,15 @@ class PatternGrid(gridlib.Grid):
             elif self.GetGridCursorRow() == EFFECT_ROW:
                 self.SetGridCursor(NOTE_ROW, 0)
 
+    def MoveLeftWithSpecialWrap(self):
+        success = self.MoveCursorLeft(False)
+        if not success:
+            if self.GetGridCursorRow() == NOTE_ROW:
+                self.SetGridCursor(EFFECT_ROW, 15)
+            elif self.GetGridCursorRow() == GRAPHIC_ROW:
+                self.SetGridCursor(GRAPHIC_ROW, 15)
+            elif self.GetGridCursorRow() == EFFECT_ROW:
+                self.SetGridCursor(NOTE_ROW, 15)
 
 # ----------------------------------------------------------------
 class NoteRenderer(gridlib.PyGridCellRenderer):

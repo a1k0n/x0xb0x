@@ -1,8 +1,16 @@
+from Globals import *
+import wx
 
 class Controller:
 
-    def __init__(self):
+    def __init__(self, app):
+        self.app = app
+        self.LoadConfiguration()
         pass
+
+    def destroy(self):
+        self.SaveConfiguration()
+                
 
     def setView(self, view):
         self.view = view
@@ -10,20 +18,45 @@ class Controller:
     def setModel(self, model):
         self.model = model
 
+    def quitApp(self):
+        self.SaveConfiguration()
+        self.app.ExitMainLoop()
+
+    #
+    # Load and save the preferences dictionary for this application.
+    # These preferences are automatically read and saved when the application
+    # opens or closes using the procedures below.
+    #
+    def LoadConfiguration(self):
+        self.cfgFile = wx.Config(APP_NAME)
+        wx.Config.Set(self.cfgFile)
+    
+    def SaveConfiguration(self):
+        self.cfgFile.Flush()
+
+    def GetConfigValue(self, key):
+        # print 'Reading ' + key + ' : ' + self.cfgFile.Read(key)
+        return self.cfgFile.Read(key)
+
+    def SetConfigValue(self, key, value):
+        # print 'Writing ' + key + ' : ' + value
+        self.cfgFile.Write(key, value)
+
 
     ##
     #
     # VIEW --> MODEL PROTOCOL
     #
     ##
-    def openSerialPort(self):  # Perhaps these happen automatically??
-        pass
+
+    def openSerialPort(self):
+        return self.model.openSerialPort()
     
     def closeSerialPort(self):
-        pass
+        return self.model.closeSerialPort()
     
     def selectSerialPort(self, port):
-        pass
+        return self.model.selectSerialPort(port)
     
     def writepattern(self, pattern, bank, loc):
         pass
@@ -38,7 +71,7 @@ class Controller:
         pass
     
     def sendRunStop(self):
-        self.model.runTest()
+        return self.model.runTest()
         
     def setCurrentBank(self, bank):
         pass
@@ -53,7 +86,7 @@ class Controller:
         pass
 
     def uploadHexfile(self, filename):
-        self.model.uploadHexfile(filename)
+        return self.model.uploadHexfile(filename)
 
     ##
     #
@@ -61,16 +94,16 @@ class Controller:
     #
     ##
     def updateSerialStatus(self, state):
-        pass
+        return self.view.updateSerialStatus(state)
     
-    def updateSelectedSerialPort(self, port):
-        pass
-    
-    def updateSerialPortName(self, port, name):
-        pass
+    def updateSelectedSerialPort(self, name):
+        return self.view.updateSelectedSerialPort(name)
+        
+    def updateSerialPortNames(self, names):
+        return self.view.updateSerialPortNames(names)
     
     def updateCurrentPattern(self, pattern):
-        self.view.updateCurrentPattern(pattern)
+        return self.view.updateCurrentPattern(pattern)
     
     def updateLoc(self, loc):
         pass
@@ -85,4 +118,10 @@ class Controller:
         pass
 
     def updateStatusText(self, string):
-        self.view.updateStatusText(string)
+        return self.view.updateStatusText(string)
+
+    def displayModalStatusError(self, string):
+        return self.view.displayModalStatusError(string)
+
+
+        
