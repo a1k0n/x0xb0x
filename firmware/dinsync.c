@@ -40,13 +40,17 @@
 volatile uint8_t dinsync_counter = 0;   
 // clocked: keeps track of input dinsync pulses
 volatile uint8_t dinsync_clocked = 0;
-// status: disabled, output or input
-volatile uint8_t dinsync_status = DINSYNC_DISABLED; 
+
+// when doing midi sync to dinsync conversion, this is the timeout
+// to dropping the clock after a MIDICLOCK message
+volatile uint8_t dinsync_clock_timeout = 0;
 
 // these variables keep track of the dinsync pin states for dinsync in
 uint8_t last_dinsync_start = 0;
 uint8_t last_dinsync_stop = 0;
 uint8_t last_dinsync_c = 0;
+
+extern uint8_t sync;  // what sync mode are we in?
 
 extern volatile uint8_t note_counter;
 extern uint16_t timer3_init;
@@ -56,8 +60,8 @@ extern uint16_t timer3_init;
 void dinsync_start(void) {
   uint8_t flag = is_tempo_running();
   
-  // make sure we're in dinsync out mode
-  if (dinsync_status == DINSYNC_OUT) {
+  // make sure we're not in a "dinsync in" mode
+  if (sync != DIN_SYNC) {
     //putstring("Starting DIN Sync\n\r");
     if (flag) 
       turn_off_tempo(); // if tempo was on, turn if off
@@ -78,7 +82,7 @@ void dinsync_start(void) {
 }
 
 void dinsync_stop(void) {
-  if (dinsync_status == DINSYNC_OUT) {
+  if (sync != DIN_SYNC) {  // make sure we're not input mode
     //putstring("Stopping DinSync\n\r");
     cbi(DINSYNC_PORT, DINSYNC_START);   // easy, just set Start low.
   }
@@ -130,7 +134,6 @@ void dinsync_set_out() {
   DINSYNC_PORT &= ~( _BV(DINSYNC_START) | _BV(DINSYNC_CLK) |
 		    _BV(DINSYNC_4) | _BV(DINSYNC_5) );
 
-  dinsync_status = DINSYNC_OUT;
 }
 
 void dinsync_set_in() {
@@ -141,5 +144,4 @@ void dinsync_set_in() {
   DINSYNC_PORT &= ~( _BV(DINSYNC_START) | _BV(DINSYNC_CLK) |
 		    _BV(DINSYNC_4) | _BV(DINSYNC_5) );
 
-  dinsync_status = DINSYNC_IN;
 }

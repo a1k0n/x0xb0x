@@ -182,9 +182,15 @@ void set_bank_led_blink(uint8_t num) {
   set_led_blink(bank_led_tab[num]);
 }
 
-uint8_t is_bank_led_blink(uint8_t num){ 
+uint8_t is_bank_led_set(uint8_t num) {
+ if (num >= 16)
+    return 0;
+  return is_led_set(bank_led_tab[num]);
+}
+
+uint8_t is_bank_led_blink(uint8_t num) { 
   if (num >= 16)
-    return;
+    return 0;
   return is_led_blink(bank_led_tab[num]);
 }
 

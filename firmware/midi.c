@@ -39,12 +39,17 @@
 #include "synth.h"
 #include "main.h"
 #include "led.h"
+#include "dinsync.h"
 
 uint8_t midion_accent_velocity = 127;
 uint8_t midioff_velocity = 32;
 uint8_t midion_noaccent_velocity = 100;
 
-uint8_t midi_addr;  // store this in EEPROM
+uint8_t midi_out_addr;  // store this in EEPROM
+uint8_t midi_in_addr;   // store this in EEPROM, too!
+
+extern volatile uint8_t dinsync_clock_timeout;
+
 uint8_t midi_running_status = 0;  // suck!
 volatile int16_t midisync_clocked = 0;
 
@@ -66,6 +71,14 @@ SIGNAL(SIG_USART0_RECV) {
   char c = UDR0;
   
   if (c == MIDI_CLOCK) {
+
+    // raise dinsync clk immediately, and also sched. to drop clock
+    // (MIDISYNC -> DINSYNC conversion);
+    if (sync != DIN_SYNC) {
+      sbi(DINSYNC_PORT, DINSYNC_CLK); // rising edge on note start
+      dinsync_clock_timeout = 5;      // in 5ms drop the edge, is this enough?
+    }
+
     if (! playing)
       return;
     midisync_clocked++;
@@ -84,20 +97,20 @@ SIGNAL(SIG_USART0_RECV) {
   }
 }
 
-uint8_t get_midi_addr(void) {
-  midi_addr = internal_eeprom_read8(MIDIADDR_EEADDR);
-  if (midi_addr > 14)
-    midi_addr = 14;
+
+uint8_t get_midi_addr(uint8_t eeaddr) {
+  uint8_t midi_addr;
+  
+  midi_addr = internal_eeprom_read8(eeaddr);
+  if (midi_addr > 15)
+    midi_addr = 15;
   return midi_addr;
 }
 
-void set_midi_addr(uint8_t a) {
-  midi_addr = a;
-  internal_eeprom_write8(MIDIADDR_EEADDR, midi_addr);
-}
 
 void init_midi(void) {
-  get_midi_addr();
+  midi_in_addr = get_midi_addr(MIDIIN_ADDR_EEADDR);
+  midi_out_addr = get_midi_addr(MIDIOUT_ADDR_EEADDR);
 }
 
 void do_midi_mode(void) {
@@ -110,7 +123,7 @@ void do_midi_mode(void) {
 
   // show midi addr on bank leds
   clear_bank_leds();
-  set_bank_led(midi_addr);
+  set_bank_led(midi_in_addr);
 
   last_bank = bank;
   
@@ -124,16 +137,17 @@ void do_midi_mode(void) {
     if (has_bank_knob_changed()) {
       // bank knob was changed, check if it was going up or down
       if (last_bank == (bank+1)%16) {
-	if (midi_addr != 0)
-	  midi_addr--;
+	if (midi_in_addr != 0)
+	  midi_in_addr--;
       } else {
-	if (midi_addr != 14)
-	  midi_addr++;
+	if (midi_in_addr != 15)
+	  midi_in_addr++;
       }
-      // set the new midi address (burn to EEPROM) and display
-      set_midi_addr(midi_addr);
+      // set the new midi address (burn to EEPROM)
+      internal_eeprom_write8(MIDIIN_ADDR_EEADDR, midi_in_addr);
+
       clear_bank_leds();
-      set_bank_led(midi_addr);
+      set_bank_led(midi_in_addr);
 
       last_bank = bank;
     }
@@ -146,8 +160,11 @@ void do_midi_mode(void) {
       c = midi_getchar();
       if (c >> 7) {       // if the top bit is high, this is a command
 	if ((c >> 4 == 0xF) ||    // universal cmd, no addressing
-	    (((c >> 4)& 0xF) == midi_addr)) {  // matches our addr
+	    ((c & 0xF) == midi_in_addr)) {  // matches our addr
 	  midi_running_status = c >> 4;
+	} else {
+	  // not for us, continue!
+	  continue;
 	}
       }
 
@@ -208,7 +225,7 @@ uint8_t midi_recv_cmd(void) {
       if (c >> 4 == 0xF)     // universal cmd, no addressing
 	return c;
       
-      if ((c & 0xF) == midi_addr) {
+      if ((c & 0xF) == midi_in_addr) {
 	midi_running_status = c >> 4;
 	return c;
       }
@@ -232,7 +249,7 @@ void midi_note_on(uint8_t note, uint8_t velocity) {
 }
 
 void midi_send_note_on(uint8_t note) {
-  midi_putchar((MIDI_NOTE_ON << 4) | midi_addr);
+  midi_putchar((MIDI_NOTE_ON << 4) | midi_out_addr);
 
   if ( (note & 0x3F) == 0)
     midi_putchar(0);                                 // rest
@@ -246,7 +263,7 @@ void midi_send_note_on(uint8_t note) {
 }
 
 void midi_send_note_off(uint8_t note) {
-  midi_putchar((MIDI_NOTE_OFF << 4) | midi_addr);  // command
+  midi_putchar((MIDI_NOTE_OFF << 4) | midi_out_addr);  // command
 
   if ((note & 0x3F) == 0)
     midi_putchar(0);                                 // rest
@@ -295,7 +312,7 @@ void midi_stop(void) {
 }
 
 void midi_notesoff(void) {
-  midi_putchar((MIDI_CONTROLLER<<4) | midi_addr);
+  midi_putchar((MIDI_CONTROLLER<<4) | midi_out_addr);
   midi_putchar(MIDI_ALL_NOTES_OFF);
   midi_putchar(0);
 }

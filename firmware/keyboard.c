@@ -60,20 +60,17 @@ const static uint8_t notekey_tab[13] = {
   KEY_C2
 };
 
+extern uint8_t midi_out_addr;  // the midi address for outgoing stuff
 
 void do_keyboard_mode(void) {
   signed int shift = 0;
   uint8_t accent=0, slide=0;
-  uint8_t i, midi_addr, last_bank;
+  uint8_t i, last_bank;
   
   // turn tempo off!
   turn_off_tempo();
-    
-  // show the current MIDI address
-  midi_addr = get_midi_addr();
+  
   clear_bank_leds();
-  set_bank_led(midi_addr);
-
   last_bank = bank;
 
   while (1) {
@@ -83,20 +80,24 @@ void do_keyboard_mode(void) {
       midi_notesoff();           // turn all notes off
       return;
     }
+  
+    // show the current MIDI address
+    if (!is_bank_led_set(midi_out_addr)) {
+      clear_bank_leds();
+      set_bank_led(midi_out_addr);
+    }
 
     if (has_bank_knob_changed()) {
       // bank knob was changed, check if it was going up or down
       if (last_bank == (bank+1)%16) {
-	if (midi_addr != 0)
-	  midi_addr--;
+	if (midi_out_addr != 0)
+	  midi_out_addr--;
       } else {
-	if (midi_addr != 14)
-	  midi_addr++;
+	if (midi_out_addr != 15)
+	  midi_out_addr++;
       }
-      // set the new midi address (burn to EEPROM) and display
-      set_midi_addr(midi_addr);
-      clear_bank_leds();
-      set_bank_led(midi_addr);
+      // set the new midi address (burn to EEPROM)
+      internal_eeprom_write8(MIDIOUT_ADDR_EEADDR, midi_out_addr);
 
       last_bank = bank;
     }
@@ -117,8 +118,6 @@ void do_keyboard_mode(void) {
 	midi_send_note_off( ((C2+i) + shift*OCTAVE) | (accent << 6));
       }
     }
-
-
 
     if (just_pressed(KEY_UP)) {
       if (shift < 1)
@@ -143,6 +142,5 @@ void do_keyboard_mode(void) {
       note_off(0);
       slide = FALSE;
     }
-
   }
 }

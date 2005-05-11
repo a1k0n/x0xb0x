@@ -37,17 +37,23 @@ void send_msg(uint8_t *buff, uint16_t len);
 void send_status(uint8_t stat);
 
 #define PING_MSG 0x01
+#define PING_MSG_LEN 0
 #define STATUS_MSG 0x80
+#define STATUS_MSG_LEN 1
 
 #define WR_PATT_MSG 0x10
+#define WR_PATT_MSG_LEN PATT_SIZE+1
 #define RD_PATT_MSG 0x11
+#define RD_PATT_MSG_LEN 1
 #define LOAD_PATT_MSG 0x12
 #define GET_PATT_MSG  0x13
+#define PATT_MSG 0x19
 
 #define WR_TRACK_MSG 0x20
 #define RD_TRACK_MSG 0x21
-#define LOAD_TRACK_MSG 0x12
-#define GET_TRACK_MSG  0x13
+#define LOAD_TRACK_MSG 0x22
+#define GET_TRACK_MSG  0x23
+#define TRACK_MSG 0x29
 
 #define START_SEQ_MSG 0x30
 #define STOP_SEQ_MSG 0x31

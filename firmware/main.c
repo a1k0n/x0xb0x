@@ -90,7 +90,6 @@ extern volatile uint8_t all_accent, all_slide, all_rest; // all the time
 extern volatile uint8_t playing;
 
 extern volatile uint8_t dinsync_counter;  // defined in dinsync.c
-extern volatile uint8_t dinsync_status; // same
 
 // the 'tempo' interrupt! (on timer 3) 
 // gets called 2*4*DINSYNC_PPQ times per beat (192 calls per beat @ sync24)
@@ -128,7 +127,7 @@ void do_tempo(void) {
       return;
     }
     dinsync_counter++;
-  }  
+  }
 
   if (note_counter & 0x1) {       // sixteenth notes
     switch(function) {
@@ -428,7 +427,7 @@ void do_tempo(void) {
 volatile extern uint8_t debounce_timer;         // in switch.c
 volatile extern uint16_t tap_tempo_timer;        // in pattern_play.c
 volatile extern uint8_t last_dinsync_c;
-volatile extern int16_t dinsync_clocked;
+volatile extern int16_t dinsync_clocked, dinsync_clock_timeout;
 
 SIGNAL(SIG_OUTPUT_COMPARE0) {
   uint8_t curr_dinsync_c;
@@ -438,16 +437,23 @@ SIGNAL(SIG_OUTPUT_COMPARE0) {
   if (tap_tempo_timer != 0xFFFF)
     tap_tempo_timer++;
 
+  if (dinsync_clock_timeout != 0) {
+    dinsync_clock_timeout--;
+    if (dinsync_clock_timeout == 0) {
+      cbi(DINSYNC_PORT, DINSYNC_CLK);    // lower the clock
+    }
+  }
+
   if (sync == DIN_SYNC) {
     curr_dinsync_c = (DINSYNC_PIN >> DINSYNC_CLK) & 0x1;
     
     if (!last_dinsync_c && curr_dinsync_c) {
       dinsync_clocked++;   // notify a clock was recv'd
-      midi_putchar(MIDI_CLOCK);
+      midi_putchar(MIDI_CLOCK); // send a midi clock message immediately
+      // (DINSYNC to MIDISYNC conversion)
       last_dinsync_c = curr_dinsync_c;
     } else {
-      last_dinsync_c = curr_dinsync_c;
-      
+      last_dinsync_c = curr_dinsync_c;      
     }
   }
 }
@@ -482,7 +488,6 @@ SIGNAL(SIG_PIN_CHANGE0) {
 
 ////////////////////////////////// main()
 int main(void) {
-  uint8_t i;
 
   ioinit();        // set up IO ports and the UART
 
@@ -505,50 +510,65 @@ int main(void) {
     read_switches();
     switch (function) {
     case COMPUTER_CONTROL_FUNC:
-      //putstring("CompControl\n\r");
+      putstring("CompControl\n\r");
+      sync = INTERNAL_SYNC;
       do_computer_control();
       break;
     case EDIT_PATTERN_FUNC:
-      //putstring("PattEdit\n\r");
+      putstring("PattEdit\n\r");
+      sync = INTERNAL_SYNC;
       do_pattern_edit();
       break;
     case PLAY_PATTERN_FUNC:
-      //putstring("PattPlay\n\r");
+      putstring("PattPlay\n\r");
       sync = INTERNAL_SYNC;
       do_patterntrack_play();
       break;
     case PLAY_PATTERN_DINSYNC_FUNC:
-      //putstring("PattPlay DINSYNC\n\r");
+      putstring("PattPlay DINSYNC\n\r");
       sync = DIN_SYNC;
       do_patterntrack_play();
       break;
     case PLAY_PATTERN_MIDISYNC_FUNC:
-      //putstring("PattPlay MidiSYNC\n\r");
+      putstring("PattPlay MidiSYNC\n\r");
       sync = MIDI_SYNC;
       do_patterntrack_play();
       break;
     case EDIT_TRACK_FUNC:
-      //putstring("TrackEdit\n\r");
+      putstring("TrackEdit\n\r");
+      sync = INTERNAL_SYNC;
       do_track_edit();
       break;
-    case PLAY_TRACK_FUNC:
-      //putstring("TrackPlay\n\r");
-      sync = INTERNAL_SYNC;
+    case PLAY_TRACK_FUNC: 
+      putstring("TrackPlay\n\r");
+     sync = INTERNAL_SYNC;
+      do_patterntrack_play();
+      break;
+    case PLAY_TRACK_DINSYNC_FUNC:
+      putstring("TrackPlay DINSYNC\n\r");
+      sync = DIN_SYNC;
+      do_patterntrack_play();
+      break;
+    case PLAY_TRACK_MIDISYNC_FUNC:
+      putstring("TrackPlay MIDISync\n\r");
+      sync = MIDI_SYNC;
       do_patterntrack_play();
       break;
     case MIDI_CONTROL_FUNC:
+      putstring("MIDIControl\n\r");
       sync = INTERNAL_SYNC;
-      //putstring("MIDIControl\n\r");
       do_midi_mode();
       break;
     case KEYBOARD_MODE_FUNC:
-      //putstring("Keyboard\n\r");
+      putstring("Keyboard\n\r");
+      sync = INTERNAL_SYNC;
       do_keyboard_mode();
       break;
     case RANDOM_MODE_FUNC: {
       //uint8_t dinsync_started = 0; // stopped
       //uint8_t dinsync_lastpulse = 0; // 
-      //putstring("rAnD0m\n\r");
+      putstring("rAnD0m\n\r");
+      sync = INTERNAL_SYNC;
       turn_on_tempo();
       //dinsync_start();
       while (1) {
@@ -559,37 +579,11 @@ int main(void) {
 	  turn_off_tempo();
 	  break;
 	}
-
-	/*
-	if (dinsync_status == DINSYNC_IN) {
-	  if (!dinsync_started && ((DINSYNC_PIN >> DINSYNC_START) & 0x1)) {
-	    // just started
-	    //putstring("DINSYNC started\n\r");
-	    dinsync_started = 1;
-	    turn_off_tempo();  // we'll drive this ourselves
-	    note_counter = dinsync_counter = 0;  // start from scratch
-	  } 
-	  if (dinsync_started && !((DINSYNC_PIN >> DINSYNC_START) & 0x1)) {
-	    // just stopped
-	    //putstring("DINSYNC stopped\n\r");
-	    dinsync_started = 0;
-	    note_counter = dinsync_counter = 0;  // start from scratch
-	    turn_on_tempo();
-	  }
-
-	  // detect edge
-	  if (dinsync_started && (dinsync_lastpulse != ((DINSYNC_PIN >> DINSYNC_CLK) & 0x1))) {
-	    // invert kept value
-	    dinsync_lastpulse = (DINSYNC_PIN >> DINSYNC_CLK) & 0x1;
-	    //uart_putchar('.');
-	    sbi(TIFR, TOV3); // force an overflow of the timer3 interrupt (sync/tempo)
-	  }
-	}
-	*/
       }
       break;
     }
     default:
+      //putstring(" "); putnum_ud(function);
       // something else
       break;
     }
