@@ -70,6 +70,7 @@ ID_SERIAL_PORT2 = wxNewId()
 ID_SERIAL_PORT3 = wxNewId()
 ID_SERIAL_PORT4 = wxNewId()
 
+ID_LENGTH_TEXT = wxNewId()
 ID_RUNSTOP_BUTTON = wxNewId()
 
 ## Create a new frame class, derived from the wxPython Frame.  This is where
@@ -145,44 +146,41 @@ class MainWindow(wxFrame):
         
         label1 = wxStaticText(self, -1, "Pattern Edit", (20, 64))
         label2 = wxStaticText(self, -1, "Pattern Play", (20, 286))
-        #label3 = wxStaticText(self, -1, "Global Parameters", (20, 423))
+        # label3 = wxStaticText(self, -1, "Global Parameters", (20, 423))
 
         #
         # Pattern Edit Section
         #
-        pe_font = wxFont(11, wxDEFAULT, wxNORMAL, wxNORMAL)
+        font = wxFont(11, wxDEFAULT, wxNORMAL, wxNORMAL)
+
         pe_label1 = wxStaticText(self, -1, "Bank:", (36, 228), style = wxALIGN_RIGHT)
-        pe_label1.SetFont(pe_font)
+        pe_label1.SetFont(font)
         pe_label1.SetSize(pe_label1.GetBestSize())
+        pe_text1 = wxTextCtrl(self, -1, "1", (71, 225), (39,19), style = (wxTE_PROCESS_ENTER))
 
         pe_label2 = wxStaticText(self, -1, "Location:", (18, 253), style = wxALIGN_RIGHT)
-        pe_label2.SetFont(pe_font)
+        pe_label2.SetFont(font)
         pe_label2.SetSize(pe_label2.GetBestSize())
-
-#        pe_label3 = wxStaticText(self, -1, "Backup:", (461, 226), style = wxALIGN_RIGHT)
-#        pe_label3.SetSize(pe_label3.GetBestSize())
-
-        pe_text1 = wxTextCtrl(self, -1, "1", (71, 225), (39,19), style = (wxTE_PROCESS_ENTER))
         pe_text2 = wxTextCtrl(self, -1, "1", (71, 250), (39,19), style = (wxTE_PROCESS_ENTER))
 
-        pe_button1 = wxButton(self, -1, "Write", (118, 226), (66, 17))
-        pe_button2 = wxButton(self, -1, "Read", (118, 251), (66, 17))
-#        pe_button3 = wxButton(self, -1, "Dump", (518, 226), (66, 17))
-#        pe_button4 = wxButton(self, -1, "Restore", (518, 251), (66, 17))
+        pe_SaveButton = wxButton(self, -1, "Save Pattern", (118, 226), (100, 17))
 
-
+        pe_label2 = wxStaticText(self, -1, "Pattern Length:", (450, 228), style = wxALIGN_RIGHT)
+        pe_label2.SetFont(font)
+        pe_label2.SetSize(pe_label2.GetBestSize())
+        textValidator = TextValidator(map(str, range(1, NOTES_IN_PATTERN + 1)))        
+        self.lengthText = wxTextCtrl(self, ID_LENGTH_TEXT, str(NOTES_IN_PATTERN), (542, 225), (39,19),
+                                     style = (wxTE_PROCESS_ENTER),
+                                     validator = textValidator)
+        self.Bind(wx.EVT_TEXT_ENTER, self.HandleTextEnterEvent)
+#        EVT_TEXT(self.lengthText, self.HandleKeyAction)
+#        EVT_KEY_DOWN(self.lengthText, self.HandleKeyAction)
+        
         #
         # Pattern Edit Grid
         #
-        self.patternEditGrid = PatternEditGrid(self)
+        self.patternEditGrid = PatternEditGrid(self, (70, 130))
         
-        for i in range(1,17):
-            wxStaticText(self, -1, str(i), (82 + (i-1)*507/16, 111))
-            
-        wxStaticText(self, -1, "Notes:", (24, 138))
-        wxStaticText(self, -1, "Lengths:", (11, 164))
-        wxStaticText(self, -1, "Effects:", (20, 190))
-
         #
         # Pattern Play Grid
         #
@@ -202,7 +200,7 @@ class MainWindow(wxFrame):
         EVT_BUTTON(self, ID_RUNSTOP_BUTTON, self.HandleButtonAction)
 
         pp_label1 = wxStaticText(self, -1, "Bank:", (436, 415), style = wxALIGN_RIGHT)
-        pp_label1.SetFont(pe_font)
+        pp_label1.SetFont(font)
         pp_label1.SetSize(pp_label1.GetBestSize())
 
         pp_text1 = wxTextCtrl(self, -1, "1", (476,412), (39,19), style = (wxTE_PROCESS_ENTER))
@@ -395,3 +393,65 @@ class MainWindow(wxFrame):
         elif event.GetId() == ID_SERIAL_PORT4:
             self.controller.selectSerialPort(self.portMenu.GetLabel(ID_SERIAL_PORT4))
 
+
+    def HandleTextEnterEvent(self,event):
+
+        if event.GetId() == ID_LENGTH_TEXT:
+            try:
+                val = self.lengthText.GetValue()
+                self.patternEditGrid.SetPatternLength(int(val))
+            except Exception, e:
+                # This exception fires if enter is pressed when the text
+                # box is empty.  In this case, just ignore the keypress.
+                pass
+
+        
+            
+
+
+
+
+
+# -------------------------------------------------------
+#
+# VALIDATOR CLASS
+#
+
+class TextValidator(wx.PyValidator):
+    def __init__(self, range=[]):
+        wx.PyValidator.__init__(self)
+        self.range = range
+        self.Bind(wx.EVT_CHAR, self.OnChar)
+
+    def Clone(self):
+        return TextValidator(self.range)
+
+    def Validate(self, win):
+        tc = self.GetWindow()
+        val = tc.GetValue()
+        
+        try:
+            if not (ord(val) in self.range):
+                return False
+        except Exception, e:
+            return False
+        
+        return True
+
+
+    def OnChar(self, event):
+        key = event.KeyCode()
+        tc = self.GetWindow()
+        val = tc.GetValue()
+
+        if key < wx.WXK_SPACE or key == wx.WXK_DELETE or key > 255:
+            event.Skip()
+            return
+
+        if (val + chr(key)) in self.range:
+            event.Skip()
+            return
+
+        # Returning without calling even.Skip eats the event before it
+        # gets to the text control
+        return

@@ -52,42 +52,9 @@ class View:
         self.mainWindow.portMenu.Append(ID_SERIAL_PORT2, names[1], kind = wx.ITEM_RADIO)
         self.mainWindow.portMenu.Append(ID_SERIAL_PORT3, names[2], kind = wx.ITEM_RADIO)
         self.mainWindow.portMenu.Append(ID_SERIAL_PORT4, names[3], kind = wx.ITEM_RADIO)
-        
 
-        
     def updateCurrentPattern(self, pattern):
-        grid = self.mainWindow.patternEditGrid
-
-        for i in range(0, pattern.length):
-
-            if pattern.note(i).rest:
-                grid.SetCellValue(0, i, '')
-                grid.SetCellValue(1, i, '')
-                grid.SetCellValue(2, i, '')
-
-            else:    
-                grid.SetCellValue(0, i, chr(pattern.note(i).note))
-                grid.SetCellValue(1, i, 'O')
-                
-                efx = ''
-                if pattern.note(i).accent:
-                    efx += 'A'
-                elif pattern.note(i).slide:
-                    efx += 'S'
-                elif pattern.note(i).transpose == TRANSPOSE_UP:
-                    efx += 'U'
-                elif pattern.note(i).transpose == TRANSPOSE_DOWN:
-                    efx += 'D'
-                grid.SetCellValue(2, i, efx)
-
-
-        for i in range(pattern.length, 16):
-            grid.SetCellValue(0, i, '')
-            grid.SetCellValue(1, i, '')
-            grid.SetCellValue(2, i, '')
-
-
-
+        self.mainWindow.patternEditGrid.update(pattern)
     
     def updateStatusText(self, string):
         try:
