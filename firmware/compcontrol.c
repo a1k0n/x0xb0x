@@ -105,6 +105,8 @@ SIGNAL(SIG_USART1_RECV) {
   uint16_t size;
   char c = UDR1;
 
+  set_bank_led(1); clock_leds();
+
   if (CTS) {
     if (recv_msg_i >= UART_BUFF_SIZE) {
       // send 'failure'?
@@ -139,6 +141,7 @@ SIGNAL(SIG_USART1_RECV) {
 	  putnum_uh(calc_CRC8(recv_msg_buff, size+3));
 	  //putstring("\n\r");
 	  recv_msg_i = 0;
+	  clear_bank_leds(); clock_leds();
 	  return;
 	}
 
@@ -146,6 +149,7 @@ SIGNAL(SIG_USART1_RECV) {
 
 	switch (cmd) {
 	case PING_MSG:
+	  set_bank_led(2); clock_leds();
 	  //putstring("got ping\n\r");
 	  send_status(0x1);
 	  break;
@@ -154,13 +158,14 @@ SIGNAL(SIG_USART1_RECV) {
 	  uint8_t bank, patt, i;
 	  uint16_t addr;
 
+	  set_bank_led(3); clock_leds();
 	  if (recv_msg_buff[2] != RD_PATT_MSG_LEN) {
 	    send_status(0);
 	    break;
 	  }
 
-	  bank = recv_msg_buff[3] >> 4;
-	  patt = recv_msg_buff[3] & 0xF;
+	  bank = recv_msg_buff[3];
+	  patt = recv_msg_buff[4];
 	  addr = PATTERN_MEM + bank*BANK_SIZE + patt*PATT_SIZE;
 	  /*
 	    putstring("reading patt ["); 
@@ -189,13 +194,14 @@ SIGNAL(SIG_USART1_RECV) {
 	  uint8_t bank, patt, i;
 	  uint16_t addr;
 
+	  set_bank_led(4); clock_leds();
 	  if (recv_msg_buff[2] != WR_PATT_MSG_LEN) {
 	    send_status(0);
 	    break;
 	  }
 
-	  bank = recv_msg_buff[3] >> 4;
-	  patt = recv_msg_buff[3] & 0xF;
+	  bank = recv_msg_buff[3];
+	  patt = recv_msg_buff[4];
 	  addr = PATTERN_MEM + bank*BANK_SIZE + patt*PATT_SIZE;
 	  /*
 	    putstring("writing patt ["); 
@@ -223,6 +229,7 @@ SIGNAL(SIG_USART1_RECV) {
     
   }
   
+  clear_bank_leds();
 }
 
 void send_msg(uint8_t *buff, uint16_t len) {

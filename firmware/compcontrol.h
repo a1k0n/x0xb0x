@@ -42,9 +42,9 @@ void send_status(uint8_t stat);
 #define STATUS_MSG_LEN 1
 
 #define WR_PATT_MSG 0x10
-#define WR_PATT_MSG_LEN PATT_SIZE+1
+#define WR_PATT_MSG_LEN PATT_SIZE+2
 #define RD_PATT_MSG 0x11
-#define RD_PATT_MSG_LEN 1
+#define RD_PATT_MSG_LEN 2
 #define LOAD_PATT_MSG 0x12
 #define GET_PATT_MSG  0x13
 #define PATT_MSG 0x19
