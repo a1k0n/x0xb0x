@@ -59,6 +59,8 @@ extern uint8_t function, bank;
 extern uint8_t playing;
 extern uint8_t sync;
 
+extern uint8_t prev_note;
+
 #define ACCENT_THRESH 100
 
 #define MIDI_Q_SIZE 32
@@ -126,7 +128,9 @@ void do_midi_mode(void) {
   set_bank_led(midi_in_addr);
 
   last_bank = bank;
-  
+
+  prev_note = 255;        // no notes played yet
+
   while (1) {
     read_switches();
     if (function_changed) {
@@ -182,6 +186,7 @@ void do_midi_mode(void) {
 	    putstring(") (velocity "); putnum_ud(velocity);
 	    putstring(")\n\r");
 	  */
+
 	  midi_note_on(note, velocity);
 	  break;
 	}
@@ -198,7 +203,9 @@ void do_midi_mode(void) {
 	    putstring(") (velocity "); putnum_ud(velocity);
 	    putstring(")\n\r");
 	  */
+	  
 	  midi_note_off(note, velocity);
+	  
 	  break;
 	} 
       case MIDI_PITCHBEND:
@@ -235,16 +242,29 @@ uint8_t midi_recv_cmd(void) {
 }
 
 void midi_note_off(uint8_t note, uint8_t velocity) {
-  note_off(0);
+  if (note == prev_note) {
+    note_off(0);
+    prev_note = 255;
+  }
 }
 
 void midi_note_on(uint8_t note, uint8_t velocity) {
-  if (velocity > ACCENT_THRESH) 	
-    note_on(note - 0x1A, 0, 1);
-  else if (velocity == 0) {
-    note_off(0);  // weird thing about midi: note on w/0 velocity == note off
+  uint8_t slide = 0;
+
+  if (velocity == 0) {
+    // strange midi thing: velocity 0 -> note off!
+    midi_note_off(note, velocity);
   } else {
-    note_on(note - 0x1A, 0, 0);
+    if (prev_note != 255)
+      slide = 1;
+
+    if (velocity > ACCENT_THRESH) {
+      note_on(note - 0x1A, slide, 1); // with accent
+    } else {
+      note_on(note - 0x1A, slide, 0); // no accent
+    }
+
+    prev_note = note;
   }
 }
 
