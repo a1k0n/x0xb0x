@@ -49,6 +49,9 @@ class Controller:
     #
     ##
 
+    def sendPing(self):
+        return self.model.runTest()
+
     def openSerialPort(self):
         return self.model.openSerialPort()
     
@@ -59,20 +62,20 @@ class Controller:
         return self.model.selectSerialPort(port)
     
     def writepattern(self, pattern, bank, loc):
-        pass
+        return self.model.writePattern(pattern, bank, loc)
 
     def readPattern(self, bank, loc):
-        pass
+        return self.model.readPattern(bank, loc)
 
     def backupAllPatterns(self, tofile):
-        pass
+        return self.model.backupAllPatterns(tofile)
     
     def restoreAllPatterns(self, fromfile):
-        pass
+        return self.model.restoreAllPatterns(fromFile)
     
     def sendRunStop(self):
-        return self.model.runTest()
-        
+        return self.model.sendToggleSequencerMessage()
+
     def setCurrentBank(self, bank):
         pass
     

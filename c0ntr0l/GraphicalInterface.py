@@ -50,8 +50,8 @@ import wx.grid
 from PatternEditGrid import PatternEditGrid
 from PatternPlayGrid import PatternPlayGrid
 
-DEFAULT_MAINWINDOW_SIZE = (600, 542)
-DEFAULT_MAINWINDOW_POS = (150, 150)  # Default position
+DEFAULT_MAINWINDOW_SIZE = (600, 556)
+DEFAULT_MAINWINDOW_POS = (150, 150)     # Default position
 
 #
 # ID Definitions for the event handling system.
@@ -64,13 +64,15 @@ ID_X0XB0X_UPLOAD_FIRMWARE = wxNewId()
 ID_X0XB0X_DUMP_EEPROM = wxNewId()
 ID_X0XB0X_RESTORE_EEPROM = wxNewId()
 ID_X0XB0X_RECONNECT_SERIAL = wxNewId()
+ID_X0XB0X_PING = wxNewId()
 
-ID_SERIAL_PORT1 = wxNewId()
-ID_SERIAL_PORT2 = wxNewId()
-ID_SERIAL_PORT3 = wxNewId()
-ID_SERIAL_PORT4 = wxNewId()
+ID_SERIAL_PORT = 10000
 
+
+ID_PE_LOC_TEXT = wxNewId()
+ID_PE_BANK_TEXT = wxNewId()
 ID_LENGTH_TEXT = wxNewId()
+ID_TEMPO_TEXT = wxNewId()
 ID_RUNSTOP_BUTTON = wxNewId()
 
 ## Create a new frame class, derived from the wxPython Frame.  This is where
@@ -104,7 +106,6 @@ class MainWindow(wxFrame):
                          style=wxDEFAULT_FRAME_STYLE|wxNO_FULL_REPAINT_ON_RESIZE|wxMAXIMIZE)
 
         EVT_CLOSE(self, self.OnCloseWindow)
-
 
         #
         # This line is critical for reading in image data from files. (And it took
@@ -142,37 +143,57 @@ class MainWindow(wxFrame):
         #
         divider1 = wxStaticLine(self, -1, pos = (15,55), size = (569,1), style = wxLI_HORIZONTAL)
         divider2 = wxStaticLine(self, -1, pos = (15,277), size = (569,1), style = wxLI_HORIZONTAL)
-        #divider3 = wxStaticLine(self, -1, pos = (15,414), size = (569,1), style = wxLI_HORIZONTAL)
+        divider3 = wxStaticLine(self, -1, pos = (15,442), size = (569,1), style = wxLI_HORIZONTAL)
         
         label1 = wxStaticText(self, -1, "Pattern Edit", (20, 64))
         label2 = wxStaticText(self, -1, "Pattern Play", (20, 286))
-        # label3 = wxStaticText(self, -1, "Global Parameters", (20, 423))
+        label3 = wxStaticText(self, -1, "Global Parameters", (20, 450))
 
         #
         # Pattern Edit Section
         #
         font = wxFont(11, wxDEFAULT, wxNORMAL, wxNORMAL)
 
+        #
+        # Bank select control
+        #
         pe_label1 = wxStaticText(self, -1, "Bank:", (36, 228), style = wxALIGN_RIGHT)
         pe_label1.SetFont(font)
         pe_label1.SetSize(pe_label1.GetBestSize())
-        pe_text1 = wxTextCtrl(self, -1, "1", (71, 225), (39,19), style = (wxTE_PROCESS_ENTER))
+        
+        textValidator = TextValidator(map(str, range(1, NUMBER_OF_BANKS + 1)))
+        self.pe_bankText = wxTextCtrl(self, ID_PE_BANK_TEXT, "1",
+                                      (71, 225), (39,19),
+                                      style = (wxTE_PROCESS_ENTER),
+                                      validator = textValidator)
 
+        #
+        # Location Select Control
+        #
         pe_label2 = wxStaticText(self, -1, "Location:", (18, 253), style = wxALIGN_RIGHT)
         pe_label2.SetFont(font)
         pe_label2.SetSize(pe_label2.GetBestSize())
-        pe_text2 = wxTextCtrl(self, -1, "1", (71, 250), (39,19), style = (wxTE_PROCESS_ENTER))
+
+        textValidator = TextValidator(map(str, range(1, LOCATIONS_PER_BANK + 1)))
+        self.pe_locText = wxTextCtrl(self, ID_PE_LOC_TEXT, "1", (71, 250), (39,19),
+                              style = (wxTE_PROCESS_ENTER),
+                              validator = textValidator)
+        
 
         pe_SaveButton = wxButton(self, -1, "Save Pattern", (118, 226), (100, 17))
 
         pe_label2 = wxStaticText(self, -1, "Pattern Length:", (450, 228), style = wxALIGN_RIGHT)
         pe_label2.SetFont(font)
         pe_label2.SetSize(pe_label2.GetBestSize())
+
+
         textValidator = TextValidator(map(str, range(1, NOTES_IN_PATTERN + 1)))        
         self.lengthText = wxTextCtrl(self, ID_LENGTH_TEXT, str(NOTES_IN_PATTERN), (542, 225), (39,19),
                                      style = (wxTE_PROCESS_ENTER),
                                      validator = textValidator)
         self.Bind(wx.EVT_TEXT_ENTER, self.HandleTextEnterEvent)
+
+        
 #        EVT_TEXT(self.lengthText, self.HandleKeyAction)
 #        EVT_KEY_DOWN(self.lengthText, self.HandleKeyAction)
         
@@ -205,6 +226,29 @@ class MainWindow(wxFrame):
 
         pp_text1 = wxTextCtrl(self, -1, "1", (476,412), (39,19), style = (wxTE_PROCESS_ENTER))
 
+
+        #
+        # The tempo and sync source controls appear in the very bottom of the
+        # window.
+        #
+        tempoText = wxStaticText(self, -1, "Tempo:", (27, 486), style = wxALIGN_LEFT)
+        tempoText.SetFont(font)
+        tempoText.SetSize(pe_label2.GetBestSize())
+
+#        textValidator = TextValidator(map(str, range(1, NOTES_IN_PATTERN + 1)))        
+        self.lengthText = wxTextCtrl(self, ID_TEMPO_TEXT, '60', (71, 484), (39,19),
+                                     style = (wxTE_PROCESS_ENTER))
+        self.Bind(wx.EVT_TEXT_ENTER, self.HandleTextEnterEvent)
+
+
+        syncText = wxStaticText(self, -1, "Select sync mode:", (350, 486), style = wxALIGN_LEFT)
+        syncText.SetFont(font)
+        syncText.SetSize(syncText.GetBestSize())
+        
+        sampleList = ['Sync Out', 'MIDI Sync In', 'DIN Sync In']
+        self.syncChoice = wxChoice(self, -1, (454, 484), choices = sampleList)
+        self.Bind(wx.EVT_CHOICE, self.HandleChoiceEvent, self.syncChoice)
+
         #
         # Use some sizers to help keep everything in the window nicely proportioned
         # if the window is resized.
@@ -214,10 +258,6 @@ class MainWindow(wxFrame):
         self.SetSizer(self.sizer)
         self.SetAutoLayout(1)
 
-
-
-
-           
     #---------------------------------------------------------------------
     #
     # Set up a basic menu bar.  
@@ -241,6 +281,8 @@ class MainWindow(wxFrame):
         menu = wxMenu()
         self.portMenu = wx.Menu()
         menu.Append(ID_X0XB0X_RECONNECT_SERIAL, "Reconnect serial port\tCTRL-R")
+        menu.Append(ID_X0XB0X_PING, "Send serial ping\tCTRL-P")
+        menu.AppendSeparator()
         menu.AppendMenu(-1, 'Port', self.portMenu)
         menubar.Append(menu, 'Serial')
         
@@ -253,13 +295,15 @@ class MainWindow(wxFrame):
         EVT_MENU(self, ID_FILE_ABOUT, self.HandleMenuAction)
         EVT_MENU(self, ID_FILE_EXIT, self.HandleMenuAction)
         EVT_MENU(self, ID_X0XB0X_RECONNECT_SERIAL, self.HandleMenuAction)
+        EVT_MENU(self, ID_X0XB0X_PING, self.HandleMenuAction)
         EVT_MENU(self, ID_X0XB0X_UPLOAD_FIRMWARE, self.HandleMenuAction)
         EVT_MENU(self, ID_X0XB0X_DUMP_EEPROM, self.HandleMenuAction)
         EVT_MENU(self, ID_X0XB0X_RESTORE_EEPROM, self.HandleMenuAction)
-        EVT_MENU(self, ID_SERIAL_PORT1, self.HandleMenuAction)
-        EVT_MENU(self, ID_SERIAL_PORT2, self.HandleMenuAction)
-        EVT_MENU(self, ID_SERIAL_PORT3, self.HandleMenuAction)
-        EVT_MENU(self, ID_SERIAL_PORT4, self.HandleMenuAction)
+
+        # Bind events for 25 potential serial ports.
+        for i in range(25):
+            EVT_MENU(self, ID_SERIAL_PORT + i, self.HandleMenuAction)
+
 
     # --------------------------------------------------------------------
     #
@@ -306,18 +350,7 @@ class MainWindow(wxFrame):
     #
     # ====================== Actions ============================
     #
-    def HandleToolbarAction(self,event):
-        #
-        # Meme - There may be a bug here -- You would think that you would
-        # have to negate the current state of the button to toggle it on or
-        # off. Instead, it would appear that if you set the toggle state to
-        # its current state, it actually toggles states!
-        #
-        #        nextState = self.mainWindow.ToolBar.GetToolState(event.GetId())
-        #        self.mainWindow.ToolBar.ToggleTool(event.GetId(), nextState)
 
-        pass  # There are currently no toolbar events to handle.
-         
     def HandleButtonAction(self,event):
         print 'Button messoge received...'
         if event.GetId() == ID_RUNSTOP_BUTTON:
@@ -334,6 +367,10 @@ class MainWindow(wxFrame):
             print "reconnectiong"
             self.controller.closeSerialPort()
             self.controller.openSerialPort()
+
+        elif event.GetId() == ID_X0XB0X_PING:
+            self.controller.sendPing()
+                        
             
         elif event.GetId() == ID_X0XB0X_UPLOAD_FIRMWARE:
             d = wxFileDialog(self, 'Choose a x0xb0x firmware file', style = wxOPEN)
@@ -381,36 +418,33 @@ class MainWindow(wxFrame):
                                                   style = wxOK)
                     errorDialog.ShowModal()
 
-        elif event.GetId() == ID_SERIAL_PORT1:
-            self.controller.selectSerialPort(self.portMenu.GetLabel(ID_SERIAL_PORT1))
-
-        elif event.GetId() == ID_SERIAL_PORT2:
-            self.controller.selectSerialPort(self.portMenu.GetLabel(ID_SERIAL_PORT2))
-
-        elif event.GetId() == ID_SERIAL_PORT3:
-            self.controller.selectSerialPort(self.portMenu.GetLabel(ID_SERIAL_PORT3))
-
-        elif event.GetId() == ID_SERIAL_PORT4:
-            self.controller.selectSerialPort(self.portMenu.GetLabel(ID_SERIAL_PORT4))
+        elif event.GetId() >= ID_SERIAL_PORT:
+            self.controller.selectSerialPort(self.portMenu.GetLabel(event.GetId()))
 
 
     def HandleTextEnterEvent(self,event):
 
         if event.GetId() == ID_LENGTH_TEXT:
             try:
-                val = self.lengthText.GetValue()
-                self.patternEditGrid.SetPatternLength(int(val))
-            except Exception, e:
+                val = int(self.lengthText.GetValue())
+                self.patternEditGrid.SetPatternLength(val)
+            except ValueError, e:
                 # This exception fires if enter is pressed when the text
                 # box is empty.  In this case, just ignore the keypress.
                 pass
 
-        
-            
+        elif (event.GetId() == ID_PE_BANK_TEXT) or (event.GetId() == ID_PE_LOC_TEXT):
+            try:
+                bank = int(self.pe_bankText.GetValue())
+                loc = int(self.pe_locText.GetValue())
+                self.controller.readPattern(bank,loc)
+            except ValueError, e:
+                # This exception fires if enter is pressed when the text
+                # box is empty.  In this case, just ignore the keypress.
+                pass
 
-
-
-
+    def HandleChoiceEvent(self, event):
+        print 'Choice!'
 
 # -------------------------------------------------------
 #

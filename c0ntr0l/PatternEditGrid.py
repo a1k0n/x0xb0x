@@ -1,6 +1,7 @@
 from wxPython.wx import *
 from Globals import *
 import wx.grid as gridlib
+from binascii import b2a_hex
 
 NOTE_ROW = 0
 GRAPHIC_ROW = 1
@@ -14,13 +15,16 @@ NoteKeymapDict = {'A' : 'A',
                   'E' : 'E',
                   'F' : 'F',
                   'G' : 'G',
-                  'H' : 'C2'}
+                  'H' : 'C\''}
 
 SharpKeymapDict = { 'A' : 'A#',
                     'C' : 'C#',
                     'D' : 'D#',
                     'F' : 'F#',
                     'G' : 'G#'}
+
+EffectKeymapList =  ['A','S','U','D']
+
                  
 class PatternEditGrid(gridlib.Grid):
     
@@ -37,7 +41,7 @@ class PatternEditGrid(gridlib.Grid):
                                                   (position[0] + 12 + (i)*507/16, position[1] - 19)))
 
         wxStaticText(parent, -1, "Notes:", (position[0] - 46, position[1] + 8))
-        wxStaticText(parent, -1, "Lengths:", (position[0] - 59, position[1] + 34))
+#        wxStaticText(parent, -1, "Lengths:", (position[0] - 59, position[1] + 34))
         wxStaticText(parent, -1, "Effects:", (position[0] - 50, position[1] + 60))
 
         #
@@ -57,11 +61,16 @@ class PatternEditGrid(gridlib.Grid):
 
         #
         # Size the columns appropriately and enable them.  This also
-        # clears their contents.
+        # clears their contents and sets the font size of the effect
+        # row to be slightly smaller than the rest of the rows.
         #
+        effectFont = self.GetCellFont(NOTE_ROW, 0)
+        effectFont.SetPointSize(11)
+        
         for i in range(0,16):            
             self.SetColSize(i, 512/16)
             self.enableColumn(i)
+            self.SetCellFont(EFFECT_ROW, i, effectFont)
         for i in range(0,3):
             self.SetRowSize(i, 84/3)
             
@@ -145,11 +154,11 @@ class PatternEditGrid(gridlib.Grid):
         #
         # Handle key presses for changing the effects
         #
-#        if (self.GetGridCursorRow() == EFFECT_ROW):
-#            for keyChar in NoteKeymapDict.keys():
-#                if evt.KeyCode() == ord(keyChar):
-#                    print 'Got the effect ' + NoteKeymapDict[keyChar] + '!'
-#                    handled = True
+        if (self.GetGridCursorRow() == EFFECT_ROW) and (self.GetCellValue(GRAPHIC_ROW, self.GetGridCursorCol()) == '1'):
+            for keyChar in EffectKeymapList:
+                if evt.KeyCode() == ord(keyChar):
+                    self.toggleEffect(keyChar, self.GetGridCursorCol())
+                    handled = True
             
             
         #
@@ -189,6 +198,53 @@ class PatternEditGrid(gridlib.Grid):
         self.SetCellValue(EFFECT_ROW, note, ' ')
 
 
+    #
+    # This function handles the mildly complicated logic of activating and
+    # deactivating effects and displaying them properly (and in the right order)
+    # in the GUI.
+    #
+    def toggleEffect(self, keyChar, col):
+        currentEffectString = str(self.GetCellValue(EFFECT_ROW, col))
+
+        #print 'Current effect string: ' + currentEffectString
+        #print 'Keychar is: ' + keyChar
+        
+        if keyChar in currentEffectString:
+            currentEffectString = currentEffectString.replace(keyChar, '')
+        else:
+            #
+            # The 'A' effect always appears last in order.
+            #
+            if keyChar == 'S':
+                currentEffectString += keyChar
+            #
+            # The 'S' character appears in the middle of the pattern.
+            #
+            elif keyChar == 'A':
+                tempString = 'A'
+                if 'D' in currentEffectString:
+                    tempString = 'D' + tempString
+                if 'U' in currentEffectString:
+                    tempString = 'U' + tempString
+                if 'S' in currentEffectString:
+                    tempString += 'S'
+                currentEffectString = tempString
+
+            #
+            # The 'U' and 'D' effects are mutually exclusive, since one
+            # means transpose up, and the other transpose down. 
+            #
+            elif keyChar == 'U':
+                if 'D' in currentEffectString:
+                    currentEffectString = currentEffectString.replace('D','')
+                currentEffectString = keyChar + currentEffectString
+            elif keyChar == 'D':
+                if 'U' in currentEffectString:
+                    currentEffectString = currentEffectString.replace('U','')
+                currentEffectString = keyChar + currentEffectString
+
+        self.SetCellValue(EFFECT_ROW, col, currentEffectString)
+
     def SetPatternLength(self, newLength):
         for i in range(self.length,newLength):
             self.enableColumn(i)
@@ -211,8 +267,12 @@ class PatternEditGrid(gridlib.Grid):
         self.SetCellRenderer(GRAPHIC_ROW, col, NoteRenderer(self.noteBitmap))
         self.SetCellValue(EFFECT_ROW, col, ' ')
 
+        colorDB = wxColourDatabase()
+        LIGHT_BLUE = colorDB.Find('LIGHT BLUE')
+
         for i in range(0,3):
-            self.SetCellBackgroundColour(i, col, wxWHITE)
+            self.SetCellBackgroundColour(i, col, LIGHT_BLUE)
+                                                          
 
         self.columnLabels[col].Show(True)
 
@@ -278,30 +338,43 @@ class PatternEditGrid(gridlib.Grid):
     #
     # ---------------------------------------------------
 
-    def update(self,pattern):
+    def update(self, pattern):
         for i in range(0, pattern.length):
-            
-            if pattern.note(i).rest:
-                self.SetCellValue(0, i, '')
-                self.SetCellValue(1, i, '')
-                self.SetCellValue(2, i, '')
 
-            else:    
-                self.SetCellValue(0, i, chr(pattern.note(i).note))
-                self.SetCellValue(1, i, 'O')
+            self.SetCellValue(NOTE_ROW, i, '')
+            self.SetCellValue(GRAPHIC_ROW, i, '0')
+            self.SetCellValue(EFFECT_ROW, i, '')
+
+            if pattern.note(i).rest:
+                break
+
+            else:
+                noteName = ''
+                for j in MIDI_Dict.keys():
+                    if pattern.note(i).note == MIDI_Dict[j]:
+                        noteName = j
+
+                #
+                # Meme - for debugging
+                #
+                if noteName == '':
+                    print 'Warning -- no note name found in dictionary for note ' + str(i) + '.  Value was ' + hex(pattern.note(i).note)
+
+                self.SetCellValue(NOTE_ROW, i, noteName)
+                self.SetCellValue(GRAPHIC_ROW, i, '1')
                 
                 efx = ''
                 if pattern.note(i).accent:
-                    efx += 'A'
+                    self.toggleEffect('A', i)
                 elif pattern.note(i).slide:
-                    efx += 'S'
+                    self.toggleEffect('S', i)
                 elif pattern.note(i).transpose == TRANSPOSE_UP:
-                    efx += 'U'
+                    self.toggleEffect('U', i)
                 elif pattern.note(i).transpose == TRANSPOSE_DOWN:
-                    efx += 'D'
-                self.SetCellValue(2, i, efx)
+                    self.toggleEffect('D', i)
 
     def pattern(self):
+        
         pass
 
 

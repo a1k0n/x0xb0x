@@ -88,7 +88,6 @@ class Model:
     def runTest(self):
         self.dataLink.sendPingMessage()
 
-
     def openSerialPort(self):
         #
         # Attempt to open the serial port.  
@@ -131,7 +130,6 @@ class Model:
             print 'Error: Cannot select the serial port named ' + name
             return False
 
-
     #
     # Parse a IHX file and upload it to the bootloader.
     #
@@ -142,12 +140,43 @@ class Model:
         ihx = IntelHexFormat.IntelHexFile(filename)
         if self.serialconnection and (AvrProgram.findAVRBoard(self.serialconnection) == True):
 
-            controller.updateStatusText('Uploading firmware....')
-
+            self.controller.updateStatusText('Uploading firmware....')
             try:
                 AvrProgram.doFlashProgramming(self.serialconnection, ihx.toByteString())
                 
             except serial.SerialException, e:
-                controller.updateStatusText('Programming failed: ' + e.value)
+                self.controller.updateStatusText('Programming failed: ' + e.value)
 
-            controller.updateStatusText('Firmware Upload Complete.')
+            self.controller.updateStatusText('Firmware Upload Complete.')
+
+
+    def runTest(self):
+        self.dataLink.sendPingMessage()
+
+    def readPattern(self, bank, loc):
+        try:
+            #
+            # Note that we subrtract 1 from both the bank and loc here, since the
+            # x0xb0x indexes patterns and banks starting at 0 instead of 1.
+            #
+            patternBytes = self.dataLink.sendReadPatternMessage(bank - 1, loc - 1)
+            self.controller.updateCurrentPattern(patternBytes)
+        except BadPacketException, e:
+            self.controller.updateStatusText('Packet error occured: ' + str(e))
+
+    def writePattern(self, pattern, bank, loc):
+        self.dataLink.sendWritePatternMessage(pattern, bank - 1, loc - 1)
+
+    def backupAllPatterns(self, tofile):
+        for i in range(1, NUMBER_OF_BANKS):
+            for j in range(1, LOCATIONS_PER_BANK):
+                pass
+    #
+    # Meme - these aren't finished yet.
+    #
+    def restoreAllPatterns(self, fromfile):
+        pass
+
+    def sendToggleSequencerMessage(self):
+        self.dataLink.sendRunStop()
+

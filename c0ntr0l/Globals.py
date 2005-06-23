@@ -37,6 +37,8 @@ APP_NAME = "x0xb0x c0ontr0l"
 
 
 NOTES_IN_PATTERN = 16
+NUMBER_OF_BANKS = 16
+LOCATIONS_PER_BANK = 8
 
 
 TRANSPOSE_UP = 1
@@ -45,10 +47,24 @@ TRANSPOSE_NONE = 0
 
 NOTE_REST = 0x00
 
+MIDI_Dict = {'C'   : 0x17,
+             'C#'  : 0x18,
+             'D'   : 0x19,
+             'D#'  : 0x1A,
+             'E'   : 0x1B,
+             'F'   : 0x1C,
+             'F#'  : 0x1D,
+             'G'   : 0x1E,
+             'G#'  : 0x1F,
+             'A'   : 0x20,
+             'A#'  : 0x21,
+             'B'   : 0x22,
+             'C\'' : 0x23 }
+
 # Serial port attributes.
 DEFAULT_BAUD_RATE = 19200
 DEFAULT_COMM_PORT = '/dev/cu.usbserial-3B1'
-DEFAULT_TIMEOUT = 0.5
+DEFAULT_TIMEOUT = 2.0
 
 
 

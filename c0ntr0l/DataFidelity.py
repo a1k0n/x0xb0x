@@ -64,5 +64,5 @@ def crc8(s) :
     crc = 0
     for c in s :
         crc = CRC8Table[crc ^ ord(c)]
-    return crc
+    return chr(crc)
 

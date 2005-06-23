@@ -37,7 +37,7 @@ class View:
             else:
                 self.mainWindow.statusBar.SetStatusText("Serial Port: Disconnected", 1)
         except Exception, e:
-            pass
+            print 'Exception occured: ' + str(e)
             
     def updateSelectedSerialPort(self, name):
         menuId = self.mainWindow.portMenu.FindItem(name)
@@ -48,10 +48,8 @@ class View:
         for item in self.mainWindow.portMenu.GetMenuItems():
             self.mainWindow.portMenu.Destroy(item)
 
-        self.mainWindow.portMenu.Append(ID_SERIAL_PORT1, names[0], kind = wx.ITEM_RADIO)
-        self.mainWindow.portMenu.Append(ID_SERIAL_PORT2, names[1], kind = wx.ITEM_RADIO)
-        self.mainWindow.portMenu.Append(ID_SERIAL_PORT3, names[2], kind = wx.ITEM_RADIO)
-        self.mainWindow.portMenu.Append(ID_SERIAL_PORT4, names[3], kind = wx.ITEM_RADIO)
+        for i in range(len(names)):
+            self.mainWindow.portMenu.Append(ID_SERIAL_PORT + i, names[i], kind = wx.ITEM_RADIO)
 
     def updateCurrentPattern(self, pattern):
         self.mainWindow.patternEditGrid.update(pattern)
@@ -60,7 +58,7 @@ class View:
         try:
             self.mainWindow.statusBar.SetStatusText(string, 0)
         except Exception, e:
-            pass
+            print 'Exception occured: ' + str(e)
 
     def displayModalStatusError(self, string):
         print string

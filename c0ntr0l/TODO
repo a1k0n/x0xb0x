@@ -1,0 +1,26 @@
+
+This is the current list of things that need to be done with the
+c0ntr0l application.  You'll have my undying love and gratitude if you
+knock a few items off of this list. 
+
+
+Shaving a yak:
+--------------
+- Add a pattern browser for manipulating the patterns in memory via the GUI.
+
+
+A solid day of work:
+--------------------
+- Test on Linux
+- Test on Windows
+
+
+Afternoon in a coffee shop
+--------------------------
+- Setup the py2exe build system
+
+Low hanging fruit:
+------------------
+- Make the background of the icon transparent (or make a new one entirely)
+
+

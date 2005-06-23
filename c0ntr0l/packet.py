@@ -59,8 +59,16 @@ class Packet :
                     self.contentList = self.contentList[:int(self.contentSize,16)]
                     self.isComplete = True
 
-                    self.actualCRC = str('%02X' % crc8(a2b_hex(string.join(self.headerList + self.contentList, sep = '')).upper()))
-                    print 'Actual CRC should be: ' + self.actualCRC
+                    self.actualCRC = str('%02X' % ord(crc8(a2b_hex(string.join(self.headerList + self.contentList, sep = '')))))
+
+                    #
+                    # Meme : For CRC Debugging...
+                    #
+                    #                    print self.packetList
+                    #                    print string.join(self.headerList + self.contentList, sep = '')
+                    #                    print ord(crc8(a2b_hex(string.join(self.headerList + self.contentList, sep = ''))))
+                    #                    print 'Actual CRC: ' + self.actualCRC
+                    
                     if (self.CRC == self.actualCRC) :
                         self.isCorrect = True
     
@@ -69,7 +77,7 @@ class Packet :
         if self.isComplete or not byteString :
             return
         for i in range(len(byteString)) :
-            print 'Appending byte: ' + b2a_hex(byteString[i]).upper()
+#            print 'Appending byte: ' + b2a_hex(byteString[i]).upper()
             self.packetList.append(b2a_hex(byteString[i]).upper())
             if len(self.packetList) >= PACKET_HEADER_SIZE :
                 self.extractPacketFromHexList()
@@ -83,19 +91,25 @@ class Packet :
 
     def printMe(self) :
         if self.headerList :
-            print('================================ Start Packet =============')
-            print('     packetType: ' + self.packetType)
-            print('    contentSize: ' + self.contentSize)
+            print '\n================================ Start Packet ============='
+            print '     packetType: ' + self.packetType 
+            print '    contentSize: ' + self.contentSize
             if self.CRC == self.actualCRC :
-                print('      CRC: ' + str(self.CRC) + ' PASSED')
+                print '      CRC: ' + str(self.CRC) + '    ( PASSED: ' + str(self.isCorrect) + ' )'
             else :
-                print('      CRC: ' + self.CRC + ' FAILED.  Computed CRC: ' + self.actualCRC)
-            print('        content: ' + str(self.contentList))
-            print('================================ End Packet ===============')
+                print '      CRC: ' + self.CRC + ' FAILED.  Computed CRC: ' + self.actualCRC
+            print '        content: ' + str(self.contentList)
+            print '================================ End Packet ===============\n'
         else :
-            print('*** INCOMPLETE PACKET ***')
-            print(self.packetList[:PACKET_HEADER_SIZE])
+            print '*** INCOMPLETE PACKET ***'
+            print '* received ' + str(len(self.contentList)) + ' bytes:'
+            print '* ' + str(self.packetList[:PACKET_HEADER_SIZE])
 
-    def getMessageType(self):
-        return self.contentList[0]
+    def messageType(self):
+        return a2b_hex(self.packetList[0])
 
+    def content(self):
+        return a2b_hex(string.join(self.contentList, sep = ''))
+
+    def size(self):
+        return a2b_hex(self.packetList[1:2])

@@ -5,8 +5,9 @@ NOTE_MASK = 0x3F
 SLIDE_MASK = 0x80
 ACCENT_MASK = 0x40
 
-C1 = 0x30
-C2 = 0x80
+
+C2 = 0x17
+C3 = 0x23
 
 class Pattern:
 
@@ -14,6 +15,9 @@ class Pattern:
         self.notes = []
         self.length = 0
 
+    def appendNote(self, noteName, accent, slide, transpose):
+        self.notes.append( Note(noteName, accent, slide, transpose) )
+        
     #
     # Init with a pattern
     #
@@ -23,7 +27,9 @@ class Pattern:
         self.length = len(pstring)
         
         for i in range( len(pstring) ):
-            self.notes.append( Note(pstring[i]) )
+            note = Note()
+            note.parseNoteByte( pstring[i] )
+            self.notes.append( note )
 
     def note(self, note): 
         return self.notes[note]
@@ -39,39 +45,54 @@ class Pattern:
 #
 class Note:
 
-    def __init__(self, byteNote):
+    def __init__(self):
+        self.rest = True
+
+    def parseNoteByte(self, byteNote):
 
         if ord(byteNote) == 0:
             self.rest = True
-            return None
+            return self
         
-        self.note = ord(byteNote) & 0x3F
         self.accent = not ((ord(byteNote) & ACCENT_MASK) == 0)
-        self.slide = not((ord(byteNote) & SLIDE_MASK) == 0)
+        self.slide = not ((ord(byteNote) & SLIDE_MASK) == 0)
         self.rest = False
 
         rawNote = ord(byteNote) & NOTE_MASK
-        if (rawNote > C2):
+        if (rawNote > C3):
             self.transpose = TRANSPOSE_UP
-            self.note = rawNote - C2
-        elif (rawNote < C1):
+            rawNote = rawNote - 12
+        elif (rawNote < C2):
             self.transpose = TRANSPOSE_DOWN
-            self.note = rawNote + C1
+            rawNote = rawNote + 12
         else:
             self.transpose = TRANSPOSE_NONE
-            self.note = rawNote
 
-    def toByte(self):
-        
+        self.note = rawNote
+
+    def parseNoteArgs(self, noteName, accent, slide, transpose):
+        if noteName == '':
+            self.rest = True
+            return self
+
+        self.note = noteMIDIDict[noteName]
+        self.accent = accent
+        self.slide = slide
+        self.transpose = transpose
+        self.rest = False
+
+    def toByte(self):        
         if self.transpose == TRANSPOSE_UP:
-            rawnote = chr(self.note + C2)
+            rawnote = self.note + 12
         elif self.transpose == TRANSPOSE_DOWN:
-            rawnote = chr(self.note - C1)
+            rawnote = self.note - 12
         else:
-            rawnote = chr(self.note)
+            rawnote = self.note
 
         if self.accent:
             rawnote |= ACCENT_MASK
 
         if self.slide:
             rawnote |= SLIDE_MASK
+
+        return chr(rawnote)

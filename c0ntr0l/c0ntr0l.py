@@ -42,7 +42,12 @@ import controller
 import view
 
 #---------------------------------------------------------------------------
-# Every wxWindows application must have a class derived from wxApp.
+# Every wxWindows application must have a class derived from wxApp.  The wxApp
+# class sets up the basic event handling system (which is behind the scenes --
+# you never really see it, but you can access it through calls to the wxApp object).
+# Once everything for the wxApp has been properly initialized, the OnInit() function
+# is called, where your code takes over to spawn windows in the GUI and initialize app
+# logic.
 #
 # This particular application is built around the
 # Model-View-Controller abstraction for graphical user interfaces.
@@ -82,7 +87,6 @@ class x0xc0ntr0l_App(wxApp):
         m.initialize()
         v.initialize()
 
-        
         self.m = m
         self.c = c
         self.v = v

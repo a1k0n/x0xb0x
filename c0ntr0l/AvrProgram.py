@@ -69,14 +69,20 @@ def readFuseH(serialconn):
     
     serialconn.setTimeout(0.1)
     b =  serialconn.read()
-    return ord(b)
+    if len(b) != 0:
+        return ord(b)        
+    else:
+        raise AVRException,'No x0xb0x detected on the serial port'
     
 def readFuseL(serialconn):
     serialconn.write('F')
     
     serialconn.setTimeout(0.1)
     b =  serialconn.read()
-    return ord(b)
+    if len(b) != 0:
+        return ord(b)
+    else:
+        raise AVRException,'No x0xb0x detected on the serial port'
 
 
 #
@@ -299,11 +305,13 @@ def findAVRBoard(serialconnection):
             recvdata = serialconnection.read(100)  # Read up to 100 bytes before the timeout fires
         except serial.SerialException, e:
             print 'Serial exception occured in findAVRBoard: ' + e.value
-        if recvdata != "":
+        if recvdata != '':
             break
   
-    if (recvdata == "") | (len(recvdata) != 7):
+    if (recvdata == '') or (len(recvdata) != 7):
+        # print 'Length: ' + str(len(recvdata))
         print 'Failed.'
+        raise AVRException, 'The x0xb0x did not respond.  Check to be sure that the x0xb0x is in the Bootload mode.'
         return False
     
     # Else...
@@ -333,7 +341,7 @@ def findAVRBoard(serialconnection):
 
 
 def doFlashProgramming(serialconnection, hexfilebuffer):
-    
+
     #
     # get the address from the fuses
     #
