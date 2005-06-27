@@ -13,7 +13,6 @@
 ;this program; if not, write to the Free Software Foundation, Inc., 59 Temple
 ;Place, Suite 330, Boston, MA 02111-1307 USA
 
-
 .include "m162def.inc" 
 .equ	FREQ   	= 	16000000    ; in Hz
 .equ	WAITSEC =	3         	; in seconds
