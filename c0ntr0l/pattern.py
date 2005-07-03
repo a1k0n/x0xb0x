@@ -1,19 +1,19 @@
-
 from Globals import *
 
 NOTE_MASK = 0x3F
 SLIDE_MASK = 0x80
 ACCENT_MASK = 0x40
 
-
 C2 = 0x17
 C3 = 0x23
+
+REST_NOTE = 0x00
+NULL_NOTE = 0xFF
 
 class Pattern:
 
     def __init__(self):
         self.notes = []
-        self.length = 0
 
     def appendNote(self, noteName, accent, slide, transpose):
         self.notes.append( Note(noteName, accent, slide, transpose) )
@@ -24,41 +24,58 @@ class Pattern:
     def __init__(self, pstring):
 
         self.notes = []
-        self.length = len(pstring)
         
         for i in range( len(pstring) ):
-            note = Note()
-            note.parseNoteByte( pstring[i] )
-            self.notes.append( note )
+            if ord(pstring[i]) == NULL_NOTE:
+                break
+            else:
+                note = Note()
+                note.parseNoteByte( pstring[i] )
+                self.notes.append( note )
 
-    def note(self, note): 
-        return self.notes[note]
+    def note(self, note):
+        if note < self.length:
+            return self.notes[note]
+        else:
+            raise PatternException("Attempted to access a note number greater than current pattern size")
 
     def toByteString(self):
         pstring = ''
         for i in range( len(self.notes) ):
             pstring = pstring + self.notes[i].toByte()
 
+    def length(self):
+        return len(self.notes)
+
 
 #
 # Note object
 #
+# All notes are initialized as rests.
+#
 class Note:
 
     def __init__(self):
-        self.rest = True
+        self.setToRest()
+
+    def setToRest(self):
+        self.note = REST_NOTE
+        self.accent = False
+        self.slide = False
+        self.transpose = TRANSPOSE_NONE
 
     def parseNoteByte(self, byteNote):
 
-        if ord(byteNote) == 0:
-            self.rest = True
-            return self
-        
         self.accent = not ((ord(byteNote) & ACCENT_MASK) == 0)
         self.slide = not ((ord(byteNote) & SLIDE_MASK) == 0)
-        self.rest = False
-
         rawNote = ord(byteNote) & NOTE_MASK
+
+        if rawNote == REST_NOTE:
+            self.setToRest()
+            return self
+
+        # Otherwise, this isn't a rest note:
+        
         if (rawNote > C3):
             self.transpose = TRANSPOSE_UP
             rawNote = rawNote - 12
@@ -72,14 +89,13 @@ class Note:
 
     def parseNoteArgs(self, noteName, accent, slide, transpose):
         if noteName == '':
-            self.rest = True
+            self.setToRest()
             return self
 
         self.note = noteMIDIDict[noteName]
         self.accent = accent
         self.slide = slide
         self.transpose = transpose
-        self.rest = False
 
     def toByte(self):        
         if self.transpose == TRANSPOSE_UP:
@@ -96,3 +112,11 @@ class Note:
             rawnote |= SLIDE_MASK
 
         return chr(rawnote)
+
+
+
+class PatternException(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)

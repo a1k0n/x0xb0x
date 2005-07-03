@@ -30,7 +30,8 @@ class PatternEditGrid(gridlib.Grid):
     
     def __init__(self, parent, position):
         gridlib.Grid.__init__(self, parent, -1, pos = position, size = (512, 84))
-
+        self.parent = parent
+        
         #
         # Add the text labels to the top and sides of the grid.
         #
@@ -251,7 +252,7 @@ class PatternEditGrid(gridlib.Grid):
         for i in range(newLength, NOTES_IN_PATTERN):
             self.disableColumn(i)            
         self.length = newLength
-
+        
         #
         # Finally, we have to check to make sure that the grid
         # cursor isn't outside of the valid region.  If it is,
@@ -259,6 +260,13 @@ class PatternEditGrid(gridlib.Grid):
         #
         if self.GetGridCursorCol() >= newLength:
             self.SetGridCursor(0,0)
+
+        #
+        # MEME - This is sort of a hack.  Tell the parent object
+        # (the main GUI window) to set the length text in the text
+        # box to the correct length.
+        #
+        self.parent.lengthText.SetValue(str(newLength))
 
 
     def enableColumn(self, col):
@@ -339,21 +347,29 @@ class PatternEditGrid(gridlib.Grid):
     # ---------------------------------------------------
 
     def update(self, pattern):
-        for i in range(0, pattern.length):
 
+        #
+        # First, set the enabled portion of the pattern window to the
+        # correct pattern length.
+
+        self.SetPatternLength(pattern.length())
+
+
+        #
+        # Initially set all notes to rests
+        #
+        for i in range(0, pattern.length()):
             self.SetCellValue(NOTE_ROW, i, '')
             self.SetCellValue(GRAPHIC_ROW, i, '0')
             self.SetCellValue(EFFECT_ROW, i, '')
 
-            if pattern.note(i).rest:
-                break
+        for i in range(0, pattern.length()):
+            if pattern.note(i).note != REST_NOTE:
 
-            else:
                 noteName = ''
                 for j in MIDI_Dict.keys():
                     if pattern.note(i).note == MIDI_Dict[j]:
                         noteName = j
-
                 #
                 # Meme - for debugging
                 #
@@ -373,6 +389,8 @@ class PatternEditGrid(gridlib.Grid):
                 elif pattern.note(i).transpose == TRANSPOSE_DOWN:
                     self.toggleEffect('D', i)
 
+        
+                
     def pattern(self):
         
         pass

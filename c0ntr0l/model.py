@@ -159,8 +159,8 @@ class Model:
             # Note that we subrtract 1 from both the bank and loc here, since the
             # x0xb0x indexes patterns and banks starting at 0 instead of 1.
             #
-            patternBytes = self.dataLink.sendReadPatternMessage(bank - 1, loc - 1)
-            self.controller.updateCurrentPattern(patternBytes)
+            pattern = self.dataLink.sendReadPatternMessage(bank - 1, loc - 1)
+            self.controller.updateCurrentPattern(pattern)
         except BadPacketException, e:
             self.controller.updateStatusText('Packet error occured: ' + str(e))
 

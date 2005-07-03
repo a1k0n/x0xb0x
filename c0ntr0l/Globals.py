@@ -45,7 +45,9 @@ TRANSPOSE_UP = 1
 TRANSPOSE_DOWN = -1
 TRANSPOSE_NONE = 0
 
-NOTE_REST = 0x00
+REST_NOTE = 0x00
+NULL_NOTE = 0xFF
+
 
 MIDI_Dict = {'C'   : 0x17,
              'C#'  : 0x18,
