@@ -1,4 +1,4 @@
-#
+
 # Josh Lifton and Michael Broxton
 # MIT Media Lab
 # Copyright (c) 2002-2004. All rights reserved.
@@ -50,11 +50,13 @@ import wx.grid
 from PatternEditGrid import PatternEditGrid
 from PatternPlayGrid import PatternPlayGrid
 
+
 DEFAULT_MAINWINDOW_SIZE = (600, 556)
 DEFAULT_MAINWINDOW_POS = (150, 150)     # Default position
 
+
 #
-# ID Definitions for the event handling system.
+# Widget ID definitions for the event handling system.
 #
 ID_MAIN_WINDOW = wxNewId()
 
@@ -74,6 +76,9 @@ ID_PE_BANK_TEXT = wxNewId()
 ID_LENGTH_TEXT = wxNewId()
 ID_TEMPO_TEXT = wxNewId()
 ID_RUNSTOP_BUTTON = wxNewId()
+ID_UPLOAD_PATTERN_BUTTON = wxNewId()
+ID_PP_LOAD_BANK_BUTTON = wxNewId()
+ID_SYNC_CHOICE = wxNewId()
 
 ## Create a new frame class, derived from the wxPython Frame.  This is where
 ## the main parts of the GUI are set up -- Specifically, the menus, toolbar
@@ -133,6 +138,10 @@ class MainWindow(wxFrame):
     #
     # This is where all the dirty GUI work is done.
     def SetupMainFrame(self):
+
+        #
+        # ==== The Logo ====
+        #
         logo = wxStaticText(self, -1, "x0xb0x c0ntr0l", (378, 20))
         font = wxFont(24, wxTELETYPE, wxNORMAL, wxNORMAL, faceName = "Courier")
         logo.SetFont(font)
@@ -150,8 +159,9 @@ class MainWindow(wxFrame):
         label3 = wxStaticText(self, -1, "Global Parameters", (20, 450))
 
         #
-        # Pattern Edit Section
+        # ==== Pattern Edit Section ====
         #
+
         font = wxFont(11, wxDEFAULT, wxNORMAL, wxNORMAL)
 
         #
@@ -180,7 +190,8 @@ class MainWindow(wxFrame):
                               validator = textValidator)
         
 
-        pe_SaveButton = wxButton(self, -1, "Save Pattern", (118, 226), (100, 17))
+        self.pe_SaveButton = wxButton(self, ID_UPLOAD_PATTERN_BUTTON, "Save Pattern", (118, 226), (100, 17))
+        self.Bind(wx.EVT_BUTTON, self.HandleButtonAction, self.pe_SaveButton)
 
         pe_label2 = wxStaticText(self, -1, "Pattern Length:", (450, 228), style = wxALIGN_RIGHT)
         pe_label2.SetFont(font)
@@ -203,7 +214,7 @@ class MainWindow(wxFrame):
         self.patternEditGrid = PatternEditGrid(self, (70, 130))
         
         #
-        # Pattern Play Grid
+        # ==== Pattern Play Section ====
         #
         self.patternPlayGrid = PatternPlayGrid(self)
 
@@ -216,18 +227,21 @@ class MainWindow(wxFrame):
         # Other controls and buttons in the Pattern Play section
         #
         pp_button1 = wxButton(self, ID_RUNSTOP_BUTTON, "R/S", (75, 413), (66, 17))
-        pp_button1 = wxButton(self, -1, "Load", (518, 413), (66, 17))
-
-        EVT_BUTTON(self, ID_RUNSTOP_BUTTON, self.HandleButtonAction)
-
+        pp_button2 = wxButton(self, ID_PP_LOAD_BANK_BUTTON, "Load", (518, 413), (66, 17))
+        self.Bind(wx.EVT_BUTTON, self.HandleButtonAction, pp_button1)
+        self.Bind(wx.EVT_BUTTON, self.HandleButtonAction, pp_button2)
+        
         pp_label1 = wxStaticText(self, -1, "Bank:", (436, 415), style = wxALIGN_RIGHT)
         pp_label1.SetFont(font)
         pp_label1.SetSize(pp_label1.GetBestSize())
 
-        pp_text1 = wxTextCtrl(self, -1, "1", (476,412), (39,19), style = (wxTE_PROCESS_ENTER))
+        textValidator = TextValidator(map(str, range(1, NUMBER_OF_BANKS + 1))) 
+        self.pp_bankSelect = wxTextCtrl(self, -1, "1", (476,412), (39,19),
+                                        style = (wxTE_PROCESS_ENTER),
+                                        validator = textValidator)
 
 
-        #
+        # 
         # The tempo and sync source controls appear in the very bottom of the
         # window.
         #
@@ -245,9 +259,22 @@ class MainWindow(wxFrame):
         syncText.SetFont(font)
         syncText.SetSize(syncText.GetBestSize())
         
-        sampleList = ['Sync Out', 'MIDI Sync In', 'DIN Sync In']
-        self.syncChoice = wxChoice(self, -1, (454, 484), choices = sampleList)
+        syncList = [SYNCMSG_OUT, SYNCMSG_IN_MIDI, SYNCMSG_IN_DIN]
+        self.syncChoice = wxChoice(self, ID_SYNC_CHOICE, (454, 484), choices = syncList)
         self.Bind(wx.EVT_CHOICE, self.HandleChoiceEvent, self.syncChoice)
+        self.syncChoice.SetSelection(0)
+
+        try:
+            syncPreference = self.controller.GetConfigValue('syncchoice')
+            print "pref: " + syncPreference
+            for i in range(0,len(syncList)):
+                if syncPreference == syncList[i]:
+                    self.syncChoice.SetSelection(i)
+        except ConfigException, e:
+            # No preference yet exists for sync source.
+            pass
+
+        self.controller.setSync(self.syncChoice.GetString(self.syncChoice.GetSelection()))
 
         #
         # Use some sizers to help keep everything in the window nicely proportioned
@@ -321,7 +348,7 @@ class MainWindow(wxFrame):
 
     #---------------------------------------------------------------------
     #
-    # The about box dialog.
+    # The about box dialo.g
     #
     def AboutBox(self):
         aboutString = ('(c) 2005 Michael Broxton.\n\n' +
@@ -353,9 +380,20 @@ class MainWindow(wxFrame):
 
     def HandleButtonAction(self,event):
         print 'Button messoge received...'
-        if event.GetId() == ID_RUNSTOP_BUTTON:
-            self.controller.sendRunStop()
     
+        if event.GetId() == ID_UPLOAD_PATTERN_BUTTON:
+            print "Save Pattern"
+            self.controller.writePattern(self.patternEditGrid.getPattern(),
+                                         int(self.pe_locText.GetValue()),
+                                         int(self.pe_bankText.GetValue()))
+        elif event.GetId() == ID_RUNSTOP_BUTTON:
+            print "R/S"
+            self.controller.sendRunStop()
+        elif event.GetId() == ID_PP_LOAD_BANK_BUTTON:
+            print "Load Bank"
+            self.controller.setCurrentBank(int(self.pp_bankSelect.GetValue()))
+        
+
     def HandleMenuAction(self, event):
         if event.GetId() == ID_FILE_ABOUT:
             self.AboutBox()
@@ -444,7 +482,15 @@ class MainWindow(wxFrame):
                 pass
 
     def HandleChoiceEvent(self, event):
-        print 'Choice!'
+        if event.GetId() == ID_SYNC_CHOICE:
+            print 'Choice: ' + event.GetString()
+            self.controller.setSync(event.GetString())
+            #
+            # Meme - probably want to check to see if the x0xb0x responded before
+            # making the switch permanent.
+            #
+            self.controller.SetConfigValue('syncchoice', event.GetString())
+            
 
 # -------------------------------------------------------
 #

@@ -35,19 +35,28 @@
 
 APP_NAME = "x0xb0x c0ontr0l"
 
-
+#
+# Basic constants
+#
 NOTES_IN_PATTERN = 16
 NUMBER_OF_BANKS = 16
 LOCATIONS_PER_BANK = 8
 
 
+SYNCMSG_OUT = 'Sync Out'
+SYNCMSG_IN_MIDI = 'MIDI Sync In'
+SYNCMSG_IN_DIN = 'DIN Sync In'
+
+
+#
+# Note and pattern related constants
+#
 TRANSPOSE_UP = 1
 TRANSPOSE_DOWN = -1
 TRANSPOSE_NONE = 0
 
 REST_NOTE = 0x00
 NULL_NOTE = 0xFF
-
 
 MIDI_Dict = {'C'   : 0x17,
              'C#'  : 0x18,
@@ -63,19 +72,12 @@ MIDI_Dict = {'C'   : 0x17,
              'B'   : 0x22,
              'C\'' : 0x23 }
 
+#
 # Serial port attributes.
+#
 DEFAULT_BAUD_RATE = 19200
 DEFAULT_COMM_PORT = '/dev/cu.usbserial-3B1'
 DEFAULT_TIMEOUT = 2.0
-
-
-
-DATA_COLLECTION_TIMEOUT = 2
-WAIT_TIME = range(10000)
-TIME_DELAY_FOR_OSSEND = 1.5e-3   # Time delay between bytes when sending the OS
-WINDOZE_TIME_DELAY_FOR_OSSEND = 0.8e-3
-DEFAULT_SPOTLIGHT_SERIALPORT = 0
-DEFAULT_DONGLE_SERIALPORT = 1
 
 
 def hexToSignedInt(hexString) :
@@ -92,3 +94,12 @@ def opj(path):
     """Convert paths to the platform-specific separator"""
     return apply(os.path.join, tuple(path.split('/')))
 
+
+#
+# Exceptions
+#
+class ConfigException(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)

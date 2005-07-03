@@ -35,12 +35,19 @@ class Controller:
         self.cfgFile.Flush()
 
     def GetConfigValue(self, key):
-        # print 'Reading ' + key + ' : ' + self.cfgFile.Read(key)
-        return self.cfgFile.Read(key)
+        try:
+            # print 'Reading ' + key + ' : ' + self.cfgFile.Read(key)
+            return self.cfgFile.Read(key)
+        except Exception, e:
+            raise ConfigException("Could not load config value: " + key + ".")
 
     def SetConfigValue(self, key, value):
-        # print 'Writing ' + key + ' : ' + value
-        self.cfgFile.Write(key, value)
+        try:
+            # print 'Writing ' + key + ' : ' + value
+            self.cfgFile.Write(key, value)
+        except Exception, e:
+            raise ConfigException("Could not write config value: " + key + ".")
+            
 
 
     ##
@@ -61,7 +68,7 @@ class Controller:
     def selectSerialPort(self, port):
         return self.model.selectSerialPort(port)
     
-    def writepattern(self, pattern, bank, loc):
+    def writePattern(self, pattern, bank, loc):
         return self.model.writePattern(pattern, bank, loc)
 
     def readPattern(self, bank, loc):

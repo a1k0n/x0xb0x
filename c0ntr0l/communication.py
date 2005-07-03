@@ -108,9 +108,10 @@ class DataLink:
         #
         # Convert pattern to binary
         #
-        self.sendBasicPacket(WRITE_PATTERN_MSG, content = (chr(bank) + chr(loc) + pattern.toByteString()))
-        packet = self.getBasicPacket()
-        packet.printMe()
+        #self.sendBasicPacket(WRITE_PATTERN_MSG, content = (chr(bank) + chr(loc) + pattern.toByteString()))
+        #packet = self.getBasicPacket()
+        #packet.printMe()
+        pass
 
     #
     # Sequencer run/stop control

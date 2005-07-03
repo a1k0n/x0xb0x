@@ -351,7 +351,6 @@ class PatternEditGrid(gridlib.Grid):
         #
         # First, set the enabled portion of the pattern window to the
         # correct pattern length.
-
         self.SetPatternLength(pattern.length())
 
 
@@ -389,12 +388,9 @@ class PatternEditGrid(gridlib.Grid):
                 elif pattern.note(i).transpose == TRANSPOSE_DOWN:
                     self.toggleEffect('D', i)
 
-        
-                
-    def pattern(self):
-        
-        pass
-
+    def getPattern(self):
+        for i in range(0, self.length):
+            print "Note " + str(i) + ": " + self.GetCellValue(NOTE_ROW, i)
 
 
 # ----------------------------------------------------------------
