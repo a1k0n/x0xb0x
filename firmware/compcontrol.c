@@ -105,27 +105,24 @@ SIGNAL(SIG_USART1_RECV) {
   uint16_t size;
   char c = UDR1;
 
-  set_bank_led(1); clock_leds();
-
+  set_bank_led(15); clock_leds();
+ 
   if (CTS) {
-    if (recv_msg_i >= UART_BUFF_SIZE) {
-      // send 'failure'?
-    } else {
-
-      if (recv_msg_i == 0) {
-	//putstring("cmd = "); 
-      } else if (recv_msg_i == 1) {
-	//putstring("sizeh = ");
-      } else if (recv_msg_i == 2) {
-	//putstring("sizel = ");
-      } else {
-	//putstring("d"); putnum_ud(recv_msg_i); putstring(": ");
-      }
-      // putstring("0x"); putnum_uh(c); putstring("\n\r");
-
+    if (recv_msg_i < UART_BUFF_SIZE) {
       recv_msg_buff[recv_msg_i++] = c;    // place at end of q      
+    } else {
+      // Receive failure.  Start over.  
+
+      // Meme:  Perhaps this should be a counter timeout rather than an
+      // overflow timeout?   -mbroxton
+
+      send_status(recv_msg_i);
+      recv_msg_i = 0;
+      set_bank_led(14); clock_leds();
     }
     
+    /* The header has been received.  Start grabbing the content
+     * and the CRC. */
     if (recv_msg_i >= 3) {
       cmd = recv_msg_buff[0];
       size = recv_msg_buff[1];
@@ -133,19 +130,21 @@ SIGNAL(SIG_USART1_RECV) {
       size |= recv_msg_buff[2];
 
       if (recv_msg_i >= 4 + size) { // header+foot is 4 bytes long
-	crc = recv_msg_buff[3+size];
-	//putstring("msg received");
-	if (crc != calc_CRC8(recv_msg_buff, size+3)) {
-	  //putstring("invalid! 0x"); putnum_uh(crc);
-	  //putstring(" != 0x"); 
+	crc = recv_msg_buff[3+size]; // CRC is the last byte of the packet
+
+	if (crc != calc_CRC8(recv_msg_buff, size+3)) {   
 	  putnum_uh(calc_CRC8(recv_msg_buff, size+3));
-	  //putstring("\n\r");
+
 	  recv_msg_i = 0;
+	  send_status(0);
+	  // set_bank_led(13); clock_leds();   // CRC Error
 	  clear_bank_leds(); clock_leds();
 	  return;
 	}
 
-	//putstring("valid\n\r");
+	/* If we get to here, the message has passed the CRC and is
+	 * assumed to be valid.  Now we process the message.
+	 */
 
 	switch (cmd) {
 	case PING_MSG:
@@ -157,7 +156,7 @@ SIGNAL(SIG_USART1_RECV) {
 	case RD_PATT_MSG: {
 	  uint8_t bank, patt, i;
 	  uint16_t addr;
-
+	
 	  set_bank_led(3); clock_leds();
 	  if (recv_msg_buff[2] != RD_PATT_MSG_LEN) {
 	    send_status(0);
@@ -176,10 +175,10 @@ SIGNAL(SIG_USART1_RECV) {
 	  */
 	  tx_msg_buff[0] = PATT_MSG;
 	  tx_msg_buff[1] = 0;
-	  tx_msg_buff[2] = PATT_SIZE;
+	  tx_msg_buff[2] = PATT_MSG_LEN;
 
 	  for(i=0; i<PATT_SIZE; i++) {
-	    tx_msg_buff[1+i] = spieeprom_read(addr + i);
+	    tx_msg_buff[3+i] = spieeprom_read(addr + i);
 	    //putstring(" 0x"); putnum_uh(tx_msg_buff[1+i]);
 	  }
 	  //putstring("\n\r");
@@ -211,7 +210,7 @@ SIGNAL(SIG_USART1_RECV) {
 	    putstring("\n\r");
 	  */
 	  for(i=0; i<PATT_SIZE; i++) {
-	    spieeprom_write(recv_msg_buff[4+i], addr + i);
+	    spieeprom_write(recv_msg_buff[5+i], addr + i);
 	    //putstring(" 0x"); putnum_uh(tx_msg_buff[1+i]);
 	  }
 	  //putstring("\n\r");
