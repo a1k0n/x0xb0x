@@ -379,19 +379,27 @@ class MainWindow(wxFrame):
     #
 
     def HandleButtonAction(self,event):
-        print 'Button messoge received...'
-    
         if event.GetId() == ID_UPLOAD_PATTERN_BUTTON:
-            print "Save Pattern"
-            self.controller.writePattern(self.patternEditGrid.getPattern(),
-                                         int(self.pe_locText.GetValue()),
-                                         int(self.pe_bankText.GetValue()))
+            try:
+                bank = int(self.pe_bankText.GetValue())
+                loc = int(self.pe_locText.GetValue())
+                
+                self.controller.writePattern(self.patternEditGrid.getPattern(),
+                                             bank, loc)
+            except ValueError, e:
+                # This exception fires if enter is pressed when the text
+                # box is empty.  In this case, warn the user.
+                controller.displayModalStatusError("Please select a bank and location")
+                pass
+
+
         elif event.GetId() == ID_RUNSTOP_BUTTON:
             print "R/S"
             self.controller.sendRunStop()
         elif event.GetId() == ID_PP_LOAD_BANK_BUTTON:
             print "Load Bank"
             self.controller.setCurrentBank(int(self.pp_bankSelect.GetValue()))
+
         
 
     def HandleMenuAction(self, event):

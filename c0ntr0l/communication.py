@@ -74,7 +74,7 @@ class DataLink:
 
 #----------------- Specific Packet Types ---------------------------------
     def sendPingMessage(self):
-        self.s.flush()
+        self.s.flushInput()
         self.sendBasicPacket(PING_MSG)
 
         packet = self.getBasicPacket()
@@ -85,7 +85,7 @@ class DataLink:
             print 'Bad packet!'
 
     def sendReadPatternMessage(self, bank, loc):
-        self.s.flush()
+        self.s.flushInput()
         self.sendBasicPacket(READ_PATTERN_MSG, content = chr(bank) + chr(loc))
 
         packet = self.getBasicPacket()
@@ -104,14 +104,19 @@ class DataLink:
             raise BadPacketException('Received a bad pattern.')
         
 
-    def sendWritePatternMessage(self, bank, loc, pattern):
+    def sendWritePatternMessage(self, pattern, bank, loc):
         #
         # Convert pattern to binary
         #
-        #self.sendBasicPacket(WRITE_PATTERN_MSG, content = (chr(bank) + chr(loc) + pattern.toByteString()))
-        #packet = self.getBasicPacket()
-        #packet.printMe()
-        pass
+        self.s.flushInput()
+        self.sendBasicPacket(WRITE_PATTERN_MSG, content = chr(bank) + chr(loc) + pattern.toByteString())
+
+        packet = self.getBasicPacket()
+        if packet.isCorrect:
+            packet.printMe()
+        else:
+            packet.printMe()
+            print 'Bad Packet!'
 
     #
     # Sequencer run/stop control

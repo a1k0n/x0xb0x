@@ -19,8 +19,37 @@ Afternoon in a coffee shop
 --------------------------
 - Setup the py2exe build system
 
+
 Low hanging fruit:
 ------------------
 - Make the background of the icon transparent (or make a new one entirely)
+
+
+
+
+In addition to the high level todo items above, there are several tasks that 
+need to be complete before the software is released at all.  This includes both
+bugs and incomplete features.
+
+
+- Fix and test the pattern length control.  Change the behavior so
+  that it doesn't blow away the pattern if you shorten, then lengthen it
+  again.
+
+- Implement other commapi controls. (Set tempo, sync, start/stop, etc)
+
+- Implement the pattern play control area.
+
+- Think about pattern librarian style features that could be added.  
+
+- Implement the proper tab behavior in the GUI.
+
+- See if the textvalidators can be more flexible in letting you
+  overwrite existing data.  Make this work in conjunction with tabbing
+  around the window and highlighting text.
+
+- Fix the C++ exceptions that occur when the program is exiting.
+
+- Clean everything up!
 
 

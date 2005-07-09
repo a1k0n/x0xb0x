@@ -1,5 +1,6 @@
 from wxPython.wx import *
 from Globals import *
+from pattern import Pattern
 import wx.grid as gridlib
 from binascii import b2a_hex
 
@@ -207,8 +208,8 @@ class PatternEditGrid(gridlib.Grid):
     def toggleEffect(self, keyChar, col):
         currentEffectString = str(self.GetCellValue(EFFECT_ROW, col))
 
-        #print 'Current effect string: ' + currentEffectString
-        #print 'Keychar is: ' + keyChar
+        # print 'Current effect string: ' + currentEffectString
+        # print 'Keychar is: ' + keyChar
         
         if keyChar in currentEffectString:
             currentEffectString = currentEffectString.replace(keyChar, '')
@@ -353,7 +354,6 @@ class PatternEditGrid(gridlib.Grid):
         # correct pattern length.
         self.SetPatternLength(pattern.length())
 
-
         #
         # Initially set all notes to rests
         #
@@ -373,24 +373,54 @@ class PatternEditGrid(gridlib.Grid):
                 # Meme - for debugging
                 #
                 if noteName == '':
-                    print 'Warning -- no note name found in dictionary for note ' + str(i) + '.  Value was ' + hex(pattern.note(i).note)
+                    print 'WARNING -- no note name found in dictionary for note ' + str(i) + '.  Value was ' + hex(pattern.note(i).note)
 
                 self.SetCellValue(NOTE_ROW, i, noteName)
                 self.SetCellValue(GRAPHIC_ROW, i, '1')
-                
+
                 efx = ''
                 if pattern.note(i).accent:
                     self.toggleEffect('A', i)
-                elif pattern.note(i).slide:
+
+                if pattern.note(i).slide:
                     self.toggleEffect('S', i)
-                elif pattern.note(i).transpose == TRANSPOSE_UP:
+
+                if pattern.note(i).transpose == TRANSPOSE_UP:
                     self.toggleEffect('U', i)
                 elif pattern.note(i).transpose == TRANSPOSE_DOWN:
                     self.toggleEffect('D', i)
 
     def getPattern(self):
+
+        pat = Pattern()
+        
         for i in range(0, self.length):
-            print "Note " + str(i) + ": " + self.GetCellValue(NOTE_ROW, i)
+            try:
+                note = MIDI_Dict[self.GetCellValue(NOTE_ROW,i)]
+            except KeyError, e:
+                note = REST_NOTE
+            
+            if 'A' in self.GetCellValue(EFFECT_ROW, i):
+                accent = True
+            else:
+                accent = False
+
+            if 'S' in self.GetCellValue(EFFECT_ROW,i):
+                slide = True
+            else:
+                slide = False
+
+            if 'U' in self.GetCellValue(EFFECT_ROW, i):
+                transpose = TRANSPOSE_UP
+            elif 'D' in self.GetCellValue(EFFECT_ROW, i):
+                transpose = TRANSPOSE_DOWN
+            else:
+                transpose = TRANSPOSE_NONE
+
+            pat.appendNote(note, accent, slide, transpose)
+                           
+        return pat
+                
 
 
 # ----------------------------------------------------------------

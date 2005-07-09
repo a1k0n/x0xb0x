@@ -12,16 +12,15 @@ NULL_NOTE = 0xFF
 
 class Pattern:
 
-    def __init__(self):
-        self.notes = []
-
-    def appendNote(self, noteName, accent, slide, transpose):
-        self.notes.append( Note(noteName, accent, slide, transpose) )
+    def appendNote(self, noteNum, accent, slide, transpose):
+        note = Note()
+        note.parseNoteArgs(noteNum, accent, slide, transpose)
+        self.notes.append(note)
         
     #
     # Init with a pattern
     #
-    def __init__(self, pstring):
+    def __init__(self, pstring = ''):
 
         self.notes = []
         
@@ -41,12 +40,33 @@ class Pattern:
 
     def toByteString(self):
         pstring = ''
-        for i in range( len(self.notes) ):
-            pstring = pstring + self.notes[i].toByte()
+        for i in range( NOTES_IN_PATTERN ):
+            if i < len(self.notes):
+                pstring = pstring + self.notes[i].toByte()
+            else:
+                pstring = pstring + chr(NULL_NOTE)
+        return pstring
 
     def length(self):
         return len(self.notes)
 
+
+    def printMe(self):
+        print '---> Pattern '
+        for i in range(len(self.notes)):
+            patstr = str(self.notes[i].note)
+            efxstr = '        '
+            if self.notes[i].accent:
+                efxstr += 'A '
+            if self.notes[i].slide:
+                efxstr += 'S '
+            if self.notes[i].transpose == TRANSPOSE_UP:
+                efxstr += 'U '
+            if self.notes[i].transpose == TRANSPOSE_DOWN:
+                efxstr += 'D '
+            print patstr + efxstr
+        print '---->'
+        
 
 #
 # Note object
@@ -87,21 +107,24 @@ class Note:
 
         self.note = rawNote
 
-    def parseNoteArgs(self, noteName, accent, slide, transpose):
-        if noteName == '':
+    def parseNoteArgs(self, noteNum, accent, slide, transpose):
+        if (noteNum < BOTTOM_NOTE) or (noteNum > TOP_NOTE) or (noteNum == REST_NOTE):
             self.setToRest()
             return self
 
-        self.note = noteMIDIDict[noteName]
+        self.note = noteNum
         self.accent = accent
         self.slide = slide
         self.transpose = transpose
 
     def toByte(self):        
+
         if self.transpose == TRANSPOSE_UP:
             rawnote = self.note + 12
+
         elif self.transpose == TRANSPOSE_DOWN:
             rawnote = self.note - 12
+
         else:
             rawnote = self.note
 

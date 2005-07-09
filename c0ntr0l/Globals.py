@@ -55,8 +55,10 @@ TRANSPOSE_UP = 1
 TRANSPOSE_DOWN = -1
 TRANSPOSE_NONE = 0
 
+BOTTOM_NOTE = 0x17
 REST_NOTE = 0x00
 NULL_NOTE = 0xFF
+TOP_NOTE = 0x23
 
 MIDI_Dict = {'C'   : 0x17,
              'C#'  : 0x18,
@@ -71,6 +73,8 @@ MIDI_Dict = {'C'   : 0x17,
              'A#'  : 0x21,
              'B'   : 0x22,
              'C\'' : 0x23 }
+
+
 
 #
 # Serial port attributes.
