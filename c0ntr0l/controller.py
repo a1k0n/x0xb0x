@@ -77,8 +77,11 @@ class Controller:
     def backupAllPatterns(self, tofile):
         return self.model.backupAllPatterns(tofile)
     
-    def restoreAllPatterns(self, fromfile):
+    def restoreAllPatterns(self, fromFile):
         return self.model.restoreAllPatterns(fromFile)
+
+    def eraseAllPatterns(self):
+        return self.model.eraseAllPatterns()
     
     def sendRunStop(self):
         return self.model.sendToggleSequencerMessage()
@@ -134,4 +137,4 @@ class Controller:
         return self.view.displayModalStatusError(string)
 
 
-        
+    

@@ -65,6 +65,7 @@ ID_FILE_ABOUT = wxNewId()
 ID_X0XB0X_UPLOAD_FIRMWARE = wxNewId()
 ID_X0XB0X_DUMP_EEPROM = wxNewId()
 ID_X0XB0X_RESTORE_EEPROM = wxNewId()
+ID_X0XB0X_ERASE_EEPROM = wxNewId()
 ID_X0XB0X_RECONNECT_SERIAL = wxNewId()
 ID_X0XB0X_PING = wxNewId()
 
@@ -250,7 +251,7 @@ class MainWindow(wxFrame):
         tempoText.SetSize(pe_label2.GetBestSize())
 
 #        textValidator = TextValidator(map(str, range(1, NOTES_IN_PATTERN + 1)))        
-        self.lengthText = wxTextCtrl(self, ID_TEMPO_TEXT, '60', (71, 484), (39,19),
+        self.tempoText = wxTextCtrl(self, ID_TEMPO_TEXT, '60', (71, 484), (39,19),
                                      style = (wxTE_PROCESS_ENTER))
         self.Bind(wx.EVT_TEXT_ENTER, self.HandleTextEnterEvent)
 
@@ -302,8 +303,9 @@ class MainWindow(wxFrame):
         menu.AppendSeparator()
         menu.Append(ID_X0XB0X_DUMP_EEPROM, "Backup EEPROM", "Backup EEPROM to the hard disk")
         menu.Append(ID_X0XB0X_RESTORE_EEPROM, "Restore EEPROM", "Restore EEPROM from a backup on the hard drive")
+        menu.AppendSeparator()
+        menu.Append(ID_X0XB0X_ERASE_EEPROM, "Erase EEPROM", "Erase the patterns on your x0xb0x.")
         menubar.Append(menu, "x0xb0x")
-
 
         menu = wxMenu()
         self.portMenu = wx.Menu()
@@ -326,6 +328,7 @@ class MainWindow(wxFrame):
         EVT_MENU(self, ID_X0XB0X_UPLOAD_FIRMWARE, self.HandleMenuAction)
         EVT_MENU(self, ID_X0XB0X_DUMP_EEPROM, self.HandleMenuAction)
         EVT_MENU(self, ID_X0XB0X_RESTORE_EEPROM, self.HandleMenuAction)
+        EVT_MENU(self, ID_X0XB0X_ERASE_EEPROM, self.HandleMenuAction)
 
         # Bind events for 25 potential serial ports.
         for i in range(25):
@@ -356,8 +359,6 @@ class MainWindow(wxFrame):
         dlg = wxMessageDialog(self, aboutString, 'x0xb0x c0ntr0l', wxOK | wxICON_INFORMATION) 
         dlg.ShowModal() 
         dlg.Destroy()
-
-
 
     #
     # This method is called automatically when the CLOSE event is
@@ -419,7 +420,7 @@ class MainWindow(wxFrame):
                         
             
         elif event.GetId() == ID_X0XB0X_UPLOAD_FIRMWARE:
-            d = wxFileDialog(self, 'Choose a x0xb0x firmware file', style = wxOPEN)
+            d = wxFileDialog(self, 'Choose a x0xb0x firmware file', style = wxOPEN, wildcard = "HEX files (*.hex)|*.hex|All files (*.*)|*.*")
             d.ShowModal()
             if len(d.GetPath()) != 0:
                 try:
@@ -436,34 +437,31 @@ class MainWindow(wxFrame):
             #
             # Dump eeprom
             #
-            d = wxFileDialog(self, 'Save EEPROM image to...', style = wxSAVE)
+            d = wxFileDialog(self, 'Save EEPROM image to...', style = wxSAVE, wildcard = "x0xb0x pattern files (*.xbp)|*.xbp|All files (*.*)|*.*")
             d.ShowModal()
             if len(d.GetPath()) != 0:
-                try:
-                    self.controller.backupAllPatterns(d.GetPath())
-                except Exception, e:
-                    errorDialog = wxMessageDialog(self,
-                                                  message = 'The following exception occured while programming the flash memory on the x0xb0x:\n\nException: ' + str(e),
-                                                  caption = 'EEPROM Backup Error',
-                                                  style = wxOK)
-                    errorDialog.ShowModal()
+                self.controller.backupAllPatterns(d.GetPath())
 
         elif event.GetId() == ID_X0XB0X_RESTORE_EEPROM:
             #
             # Retore EEPROM
             #
-            d = wxFileDialog(self, 'Choose a x0xb0x EEPROM image file', style = wxOPEN)
+            d = wxFileDialog(self, 'Choose a x0xb0x EEPROM image file', style = wxOPEN, wildcard = "x0xb0x pattern files (*.xbp)|*.xbp|All files (*.*)|*.*")
             d.ShowModal()
             if len(d.GetPath()) != 0:
-                try:
-                    self.controller.restoreAllPatterns(d.GetPath())
-                except Exception, e:
-                    errorDialog = wxMessageDialog(self,
-                                                  message = 'The following exception occured while programming the flash memory on the x0xb0x:\n\nException: ' + str(e),
-                                                  caption = 'EEPROM Restore Error',
-                                                  style = wxOK)
-                    errorDialog.ShowModal()
+                self.controller.restoreAllPatterns(d.GetPath())
 
+        elif event.GetId() == ID_X0XB0X_ERASE_EEPROM:
+            dlg = wxMessageDialog(self,
+                                  message = 'You are about to erase all of the patterns on your x0xb0x.  Are you sure you want to proceed?',
+                                  caption = "WARNING",
+                                  style = (wxICON_EXCLAMATION | wxYES_NO | wxNO_DEFAULT))
+            
+            if dlg.ShowModal() == wxID_YES:
+                self.controller.eraseAllPatterns()
+            else:
+                pass
+            
         elif event.GetId() >= ID_SERIAL_PORT:
             self.controller.selectSerialPort(self.portMenu.GetLabel(event.GetId()))
 
@@ -473,6 +471,7 @@ class MainWindow(wxFrame):
         if event.GetId() == ID_LENGTH_TEXT:
             try:
                 val = int(self.lengthText.GetValue())
+                print "New length: " + str(val)
                 self.patternEditGrid.SetPatternLength(val)
             except ValueError, e:
                 # This exception fires if enter is pressed when the text

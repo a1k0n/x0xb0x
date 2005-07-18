@@ -4,6 +4,7 @@ import serial
 import AvrProgram 
 from pattern import Pattern
 import IntelHexFormat
+import PatternFile
 from communication import *
 
 import wx
@@ -56,13 +57,16 @@ class Model:
         # names and the name of the current selection.
         #
         self.controller.updateSerialPortNames(self.serialPorts)
-        self.controller.updateSelectedSerialPort(self.currentSerialPort)
-
-        #
-        # Finally, open the serial port
-        #
-        self.openSerialPort()
-        
+        if self.currentSerialPort in self.serialPorts:
+            #
+            # Finally, open the serial port
+            #
+            self.controller.updateSelectedSerialPort(self.currentSerialPort)
+            self.openSerialPort()
+        else:
+            self.controller.updateStatusText("Error: Previously selected serial port not available.  Please select a new port.")
+            self.controller.updateSerialStatus(False);
+                
         #
         # Start with an empty active pattern
         #
@@ -163,20 +167,67 @@ class Model:
             self.controller.updateCurrentPattern(pattern)
         except BadPacketException, e:
             self.controller.updateStatusText('Packet error occured: ' + str(e))
+        except AttributeError, e:
+            self.controller.updateStatusText('Error: Not connected.  Please choose a serial port from the Serial menu.') 
 
     def writePattern(self, pattern, bank, loc):
-        self.dataLink.sendWritePatternMessage(pattern, bank - 1, loc - 1)
+        try:
+            #
+            # Note that we subrtract 1 from both the bank and loc here, since the
+            # x0xb0x indexes patterns and banks starting at 0 instead of 1.
+            #
+            self.dataLink.sendWritePatternMessage(pattern, bank - 1, loc - 1)
+        except BadPacketException, e:
+            self.controller.updateStatusText('Packet error occured: ' + str(e))
+        except AttributeError, e:
+            self.controller.updateStatusText('Error: No serial port available.  Please choose a serial port from the Serial menu.') 
 
-    def backupAllPatterns(self, tofile):
-        for i in range(1, NUMBER_OF_BANKS):
-            for j in range(1, LOCATIONS_PER_BANK):
-                pass
-    #
-    # Meme - these aren't finished yet.
-    #
-    def restoreAllPatterns(self, fromfile):
-        pass
+    def backupAllPatterns(self, toFile):
+        pf = PatternFile.PatternFile()
+        try:
+            for bank in range(1, NUMBER_OF_BANKS):
+                for loc in range(1, LOCATIONS_PER_BANK):
+                    pattern = self.dataLink.sendReadPatternMessage(bank - 1, loc - 1)
+                    pf.appendPattern(pattern, bank, loc)
+            pf.writeFile(toFile)
+            self.controller.updateStatusText('EEPROM download was succesful.')
+        except BadPacketException, e:
+            self.controller.displayModalStatusError('An unexpected communication error occured while downloading patterns.  Pattern file was not saved.')
+        except AttribuetError, e:
+            self.controller.displayModalStatusError('No serial port connected.  Please select a serial port and try again.')
+        except IOError, e:
+            self.controller.displayModalStatusError('Error writing x0xb0x pattern file.')
+        except PatternFileException, e:
+            self.controller.displayModalStatusError('Error writing x0xb0x pattern file.')
 
+    def restoreAllPatterns(self, fromFile):
+        pf = PatternFile.PatternFile()
+        try:
+            pf.readFile(fromFile)
+            for i in range(pf.numEntries()):
+                [bank, loc, pattern] = pf.getNextPattern()
+                self.dataLink.sendWritePatternMessage(pattern, bank - 1, loc - 1)
+            self.controller.updateStatusText('EEPROM upload was succesful.')
+        except BadPacketException, e:
+            self.controller.displayModalStatusError('An unexpected communication error occured while downloading patterns.  Pattern file was not saved.')
+        except AttributeError, e:
+            self.controller.displayModalStatusError('No serial port connected.  Please select a serial port and try again.')
+        except IOError, e:
+            self.controller.displayModalStatusError('Error reading x0xb0x pattern file.')
+        except PatternFileException, e:
+            self.controller.displayModalStatusError('Error reading x0xb0x pattern file.')
+
+    def eraseAllPatterns(self):
+        try:
+            for bank in range(1, NUMBER_OF_BANKS):
+                for loc in range(1, LOCATIONS_PER_BANK):
+                    self.dataLink.sendWritePatternMessage(Pattern(), bank - 1, loc - 1)
+            self.controller.updateStatusText('EEPROM successfully erased.')
+        except BadPacketException, e:
+            self.controller.displayModalStatusError('An unexpected communication error occured while downloading patterns.  Pattern file was not saved.')
+        except AttributeError, e:
+            self.controller.displayModalStatusError('No serial port connected.  Please select a serial port and try again.')
+    
     def sendToggleSequencerMessage(self):
         self.dataLink.sendRunStop()
 

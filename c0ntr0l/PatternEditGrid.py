@@ -248,6 +248,7 @@ class PatternEditGrid(gridlib.Grid):
         self.SetCellValue(EFFECT_ROW, col, currentEffectString)
 
     def SetPatternLength(self, newLength):
+        print "Setting pattern to length: " + str(newLength)
         for i in range(self.length,newLength):
             self.enableColumn(i)
         for i in range(newLength, NOTES_IN_PATTERN):

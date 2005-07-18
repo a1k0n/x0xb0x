@@ -1,0 +1,28 @@
+
+
+x0xb0x pattern file (*.xbp)  (version 100)
+---------------------------
+
+	This information can be used to put the pattern back in EEPROM
+	in the location where it was originally stored.  Optionally,
+	this information can be ignored, or set to the NULL
+	bank/pattern (0, 0) if no bank/location info is available.
+ 
+
+Starts with a file HEADER which contains the following information
+about the contents of the file.
+
+HEADER:	  
+      Version    (1 byte)  - Version number of the x0xb0x pattern file.
+      		    	     (for future backwards compatibility)
+			     The initial version number is 100.
+      NumEntries (2 bytes) - Number of pattern records stored in this file.
+
+Contains a series of ENTRIES where each entry is as follows:
+
+ENTRY:
+      Bank (1 byte) - The bank from which the pattern was saved.
+      Location (1 byte) - The loc from which the pattern was saved.
+      Pattern (16 bytes) - The x0xb0x pattern, stored in the binary
+	format used to store the pattern in EEPROM.
+
