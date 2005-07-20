@@ -10,7 +10,6 @@ class Controller:
 
     def destroy(self):
         self.SaveConfiguration()
-                
 
     def setView(self, view):
         self.view = view

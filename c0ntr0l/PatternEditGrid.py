@@ -83,6 +83,12 @@ class PatternEditGrid(gridlib.Grid):
         gridlib.EVT_GRID_CELL_LEFT_CLICK(self, self.OnGridClick)
         EVT_KEY_DOWN(self, self.OnKeyDown)
 
+    #
+    # Disable the entire pattern grid editor.
+    #
+    def Disable(self):
+        pass
+
 
     # ---------- EVENT HANDLERS ----------------
 
@@ -141,6 +147,8 @@ class PatternEditGrid(gridlib.Grid):
                                           NoteKeymapDict[keyChar])
                         self.SetCellValue(GRAPHIC_ROW, self.GetGridCursorCol(), '1')
                         self.MoveRightWithWrap()
+                        # Notify the parent window that the grid was editted
+                        self.parent.OnGridChange()
                         handled = True
             else:
                 # Process Capital keystrokes, which create notes with sharps
@@ -151,6 +159,8 @@ class PatternEditGrid(gridlib.Grid):
                                           SharpKeymapDict[keyChar])
                         self.SetCellValue(GRAPHIC_ROW, self.GetGridCursorCol(), '1')        
                         self.MoveRightWithWrap()
+                        # Notify the parent window that the grid was editted
+                        self.parent.OnGridChange()
                         handled = True
                         
         #
@@ -161,6 +171,8 @@ class PatternEditGrid(gridlib.Grid):
                 if evt.KeyCode() == ord(keyChar):
                     self.toggleEffect(keyChar, self.GetGridCursorCol())
                     handled = True
+                    # Notify the parent window that the grid was editted
+                    self.parent.OnGridChange()
             
             
         #
@@ -185,8 +197,6 @@ class PatternEditGrid(gridlib.Grid):
         if (evt.GetCol() < self.length):
             self.SetFocus()
             evt.Skip()
-
-
 
     # ---------- PATTERN EDIT GRID UTILITIES ----------------
 
@@ -248,7 +258,6 @@ class PatternEditGrid(gridlib.Grid):
         self.SetCellValue(EFFECT_ROW, col, currentEffectString)
 
     def SetPatternLength(self, newLength):
-        print "Setting pattern to length: " + str(newLength)
         for i in range(self.length,newLength):
             self.enableColumn(i)
         for i in range(newLength, NOTES_IN_PATTERN):

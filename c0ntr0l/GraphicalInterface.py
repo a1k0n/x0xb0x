@@ -77,7 +77,8 @@ ID_PE_BANK_TEXT = wxNewId()
 ID_LENGTH_TEXT = wxNewId()
 ID_TEMPO_TEXT = wxNewId()
 ID_RUNSTOP_BUTTON = wxNewId()
-ID_UPLOAD_PATTERN_BUTTON = wxNewId()
+ID_SAVE_PATTERN_BUTTON = wxNewId()
+ID_LOAD_PATTERN_BUTTON = wxNewId()
 ID_PP_LOAD_BANK_BUTTON = wxNewId()
 ID_SYNC_CHOICE = wxNewId()
 
@@ -127,6 +128,10 @@ class MainWindow(wxFrame):
         self.SetupStatusbar()
         self.SetupMainFrame()
 
+        self.currentBank = 0
+        self.currentLoc = 0
+
+
         #
         # Once everything has been set up, show the frame.
         #
@@ -141,16 +146,13 @@ class MainWindow(wxFrame):
     def SetupMainFrame(self):
 
         #
-        # ==== The Logo ====
+        # ==== The Logo and basic windw framework (labels and dividers) ====
         #
         logo = wxStaticText(self, -1, "x0xb0x c0ntr0l", (378, 20))
         font = wxFont(24, wxTELETYPE, wxNORMAL, wxNORMAL, faceName = "Courier")
         logo.SetFont(font)
         logo.SetSize(logo.GetBestSize())
 
-        #
-        # Create the basic framework for the window
-        #
         divider1 = wxStaticLine(self, -1, pos = (15,55), size = (569,1), style = wxLI_HORIZONTAL)
         divider2 = wxStaticLine(self, -1, pos = (15,277), size = (569,1), style = wxLI_HORIZONTAL)
         divider3 = wxStaticLine(self, -1, pos = (15,442), size = (569,1), style = wxLI_HORIZONTAL)
@@ -165,35 +167,36 @@ class MainWindow(wxFrame):
 
         font = wxFont(11, wxDEFAULT, wxNORMAL, wxNORMAL)
 
-        #
         # Bank select control
-        #
         pe_label1 = wxStaticText(self, -1, "Bank:", (36, 228), style = wxALIGN_RIGHT)
         pe_label1.SetFont(font)
         pe_label1.SetSize(pe_label1.GetBestSize())
-        
-        textValidator = TextValidator(map(str, range(1, NUMBER_OF_BANKS + 1)))
-        self.pe_bankText = wxTextCtrl(self, ID_PE_BANK_TEXT, "1",
-                                      (71, 225), (39,19),
-                                      style = (wxTE_PROCESS_ENTER),
-                                      validator = textValidator)
 
-        #
+        bankStrings = []
+        for i in range(1, NUMBER_OF_BANKS + 1):
+            bankStrings.append(str(i))
+        self.pe_bankText = wxChoice(self, ID_PE_BANK_TEXT,
+                                      (71, 225), (58,19),
+                                      choices = bankStrings)
+        self.Bind(wx.EVT_CHOICE, self.HandleChoiceAction, self.pe_bankText)
+        
         # Location Select Control
-        #
         pe_label2 = wxStaticText(self, -1, "Location:", (18, 253), style = wxALIGN_RIGHT)
         pe_label2.SetFont(font)
         pe_label2.SetSize(pe_label2.GetBestSize())
 
-        textValidator = TextValidator(map(str, range(1, LOCATIONS_PER_BANK + 1)))
-        self.pe_locText = wxTextCtrl(self, ID_PE_LOC_TEXT, "1", (71, 250), (39,19),
-                              style = (wxTE_PROCESS_ENTER),
-                              validator = textValidator)
+        self.pe_locText = wxChoice(self, ID_PE_LOC_TEXT, 
+                                   (71, 250), (59,19),
+                                   choices = bankStrings)
+        self.Bind(wx.EVT_CHOICE, self.HandleChoiceAction, self.pe_locText)
         
-
-        self.pe_SaveButton = wxButton(self, ID_UPLOAD_PATTERN_BUTTON, "Save Pattern", (118, 226), (100, 17))
+        # Save button
+        self.pe_SaveButton = wxButton(self, ID_SAVE_PATTERN_BUTTON, "Save Pattern", (484, 251), (100, 17))
+        self.pe_SaveButton.Disable()
         self.Bind(wx.EVT_BUTTON, self.HandleButtonAction, self.pe_SaveButton)
 
+
+        # Pattern length control
         pe_label2 = wxStaticText(self, -1, "Pattern Length:", (450, 228), style = wxALIGN_RIGHT)
         pe_label2.SetFont(font)
         pe_label2.SetSize(pe_label2.GetBestSize())
@@ -203,6 +206,7 @@ class MainWindow(wxFrame):
         self.lengthText = wxTextCtrl(self, ID_LENGTH_TEXT, str(NOTES_IN_PATTERN), (542, 225), (39,19),
                                      style = (wxTE_PROCESS_ENTER),
                                      validator = textValidator)
+        self.lengthText.Disable()
         self.Bind(wx.EVT_TEXT_ENTER, self.HandleTextEnterEvent)
 
         
@@ -262,12 +266,11 @@ class MainWindow(wxFrame):
         
         syncList = [SYNCMSG_OUT, SYNCMSG_IN_MIDI, SYNCMSG_IN_DIN]
         self.syncChoice = wxChoice(self, ID_SYNC_CHOICE, (454, 484), choices = syncList)
-        self.Bind(wx.EVT_CHOICE, self.HandleChoiceEvent, self.syncChoice)
+        self.Bind(wx.EVT_CHOICE, self.HandleChoiceAction, self.syncChoice)
         self.syncChoice.SetSelection(0)
 
         try:
             syncPreference = self.controller.GetConfigValue('syncchoice')
-            print "pref: " + syncPreference
             for i in range(0,len(syncList)):
                 if syncPreference == syncList[i]:
                     self.syncChoice.SetSelection(i)
@@ -370,6 +373,51 @@ class MainWindow(wxFrame):
         self.controller.SetConfigValue('mainwindowxloc', str(pos[0]))
         self.controller.SetConfigValue('mainwindowyloc', str(pos[1]))
         self.Destroy()
+   
+    #
+    # Returns true if pattern was loaded succesfully, false otherwise.
+    #
+    def LoadPattern(self):
+        if (self.pe_bankText.GetSelection() > -1) and (self.pe_locText.GetSelection() > -1):
+            bank = int(self.pe_bankText.GetSelection()) + 1
+            loc = int(self.pe_locText.GetSelection()) + 1
+            if self.controller.readPattern(bank,loc):
+                # Disable the save button until the grid is editted.
+                self.pe_SaveButton.Disable()
+                self.lengthText.Enable()
+                self.currentBank = bank
+                self.currentLoc = loc
+            else:
+                # The user has not yet selected a valid bank/loc combination.
+                self.patternEditGrid.SetPatternLength(0)
+                self.lengthTextDisable()
+                self.pe_SaveButton.Disable()
+                self.currentBank = 0
+                self.currentLoc = 0
+                return False
+                
+        else:
+            # The user has not yet selected a valid bank/loc combination.
+            self.controller.updateStatusText("Please select a bank and location")
+            self.patternEditGrid.SetPatternLength(0)
+            self.lengthText.Disable()
+            self.pe_SaveButton.Disable()
+            self.currentBank = 0
+            self.currentLoc = 0
+            return False
+
+    #
+    # Return true if the pattern was succesfully saved, false otherwise
+    #
+    def SavePattern(self):
+        if (self.currentBank > 0) and (self.currentLoc > 0):
+            return self.controller.writePattern(self.patternEditGrid.getPattern(),
+                                                self.currentBank, self.currentLoc)
+        else:
+            # This exception fires if enter is pressed when the text
+            # box is empty.  In this case, warn the user.
+            self.controller.displayModalStatusError("Please select a bank and location")
+            return False
 
 #---------------------------------------------------------------------------
 # UTILITY CLASSES (classes that are used by the main GUI class above)
@@ -380,28 +428,60 @@ class MainWindow(wxFrame):
     #
 
     def HandleButtonAction(self,event):
-        if event.GetId() == ID_UPLOAD_PATTERN_BUTTON:
-            try:
-                bank = int(self.pe_bankText.GetValue())
-                loc = int(self.pe_locText.GetValue())
-                
-                self.controller.writePattern(self.patternEditGrid.getPattern(),
-                                             bank, loc)
-            except ValueError, e:
-                # This exception fires if enter is pressed when the text
-                # box is empty.  In this case, warn the user.
-                controller.displayModalStatusError("Please select a bank and location")
-                pass
-
-
+        if event.GetId() == ID_SAVE_PATTERN_BUTTON:
+            if self.SavePattern():
+                self.pe_SaveButton.Disable()
+            
         elif event.GetId() == ID_RUNSTOP_BUTTON:
             print "R/S"
             self.controller.sendRunStop()
+
         elif event.GetId() == ID_PP_LOAD_BANK_BUTTON:
             print "Load Bank"
             self.controller.setCurrentBank(int(self.pp_bankSelect.GetValue()))
 
-        
+    #
+    # Event handler for grid updates
+    #   
+    def OnGridChange(self):
+        self.pe_SaveButton.Enable()
+
+    #
+    # Handle events generated by dropdown choice menus
+    #
+    def HandleChoiceAction(self, event):
+        if (event.GetId() == ID_PE_BANK_TEXT) or (event.GetId() == ID_PE_LOC_TEXT):
+            #
+            # If the we have made changes to the current pattern, ask the user
+            # whether or not to save changes.
+            #
+            if self.pe_SaveButton.IsEnabled():
+                dlg = wxMessageDialog(self,
+                                      message = 'You have made changes to this pattern.  Would you like to save your changes?',
+                                      caption = "Save Pattern?",
+                                      style = (wxICON_EXCLAMATION | wxYES_NO | wxYES_DEFAULT))
+                if dlg.ShowModal() == wxID_YES:
+                    if self.SavePattern():
+                        # If the pattern can be saved, load the pattern
+                        self.LoadPattern()
+                else:
+                    # The user has decided not to save changes.  Load the next pattern
+                    self.LoadPattern()
+            else:
+                # If the pattern has not been saved, simply load the new pattern
+                self.LoadPattern()
+                
+
+        if event.GetId() == ID_SYNC_CHOICE:
+            print 'Choice: ' + event.GetString()
+            self.controller.setSync(event.GetString())
+            #
+            # Meme - probably want to check to see if the x0xb0x responded before
+            # making the switch permanent.
+            #
+            self.controller.SetConfigValue('syncchoice', event.GetString())
+
+
 
     def HandleMenuAction(self, event):
         if event.GetId() == ID_FILE_ABOUT:
@@ -473,30 +553,11 @@ class MainWindow(wxFrame):
                 val = int(self.lengthText.GetValue())
                 print "New length: " + str(val)
                 self.patternEditGrid.SetPatternLength(val)
+                self.OnGridChange()
             except ValueError, e:
                 # This exception fires if enter is pressed when the text
                 # box is empty.  In this case, just ignore the keypress.
                 pass
-
-        elif (event.GetId() == ID_PE_BANK_TEXT) or (event.GetId() == ID_PE_LOC_TEXT):
-            try:
-                bank = int(self.pe_bankText.GetValue())
-                loc = int(self.pe_locText.GetValue())
-                self.controller.readPattern(bank,loc)
-            except ValueError, e:
-                # This exception fires if enter is pressed when the text
-                # box is empty.  In this case, just ignore the keypress.
-                pass
-
-    def HandleChoiceEvent(self, event):
-        if event.GetId() == ID_SYNC_CHOICE:
-            print 'Choice: ' + event.GetString()
-            self.controller.setSync(event.GetString())
-            #
-            # Meme - probably want to check to see if the x0xb0x responded before
-            # making the switch permanent.
-            #
-            self.controller.SetConfigValue('syncchoice', event.GetString())
             
 
 # -------------------------------------------------------

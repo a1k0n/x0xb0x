@@ -77,6 +77,7 @@ class Model:
         #
         # Clean up
         #
+        self.controller = None
         self.closeSerialPort()
 
         
@@ -97,7 +98,7 @@ class Model:
         # Attempt to open the serial port.  
         #
         try:
-            print 'Trying to open port ' + self.currentSerialPort + ' at ' + str(DEFAULT_BAUD_RATE) + 'bps'
+            self.controller.updateStatusText('Trying to open port ' + self.currentSerialPort + ' at ' + str(DEFAULT_BAUD_RATE) + 'bps')
 
             self.serialconnection = serial.Serial(self.currentSerialPort, DEFAULT_BAUD_RATE)
             self.dataLink = DataLink(self.serialconnection)
@@ -120,8 +121,14 @@ class Model:
     def closeSerialPort(self):
         if self.serialconnection:
             self.serialconnection.close()
-            self.controller.updateStatusText('Closed serial port ' + self.currentSerialPort)
-            self.controller.updateSerialStatus(False)
+            #
+            # A slight special case.  If the program is closing, the GUI is already
+            # gone so we cannot update any longer.  Checx to see if the controller
+            # exists, for if it does, the GUI can be written to.
+            #
+            if self.controller:
+                self.controller.updateStatusText('Closed serial port ' + self.currentSerialPort)
+                self.controller.updateSerialStatus(False)
 
     def selectSerialPort(self, name):
         if name in self.serialPorts:
@@ -165,10 +172,14 @@ class Model:
             #
             pattern = self.dataLink.sendReadPatternMessage(bank - 1, loc - 1)
             self.controller.updateCurrentPattern(pattern)
+            self.controller.updateStatusText('Pattern loaded from bank: ' + str(bank) + ' loc: ' + str(loc))
+            return True
         except BadPacketException, e:
             self.controller.updateStatusText('Packet error occured: ' + str(e))
+            return False
         except AttributeError, e:
-            self.controller.updateStatusText('Error: Not connected.  Please choose a serial port from the Serial menu.') 
+            self.controller.updateStatusText('Error: Not connected.  Please choose a serial port from the Serial menu.')
+            return False
 
     def writePattern(self, pattern, bank, loc):
         try:
@@ -176,11 +187,15 @@ class Model:
             # Note that we subrtract 1 from both the bank and loc here, since the
             # x0xb0x indexes patterns and banks starting at 0 instead of 1.
             #
-            self.dataLink.sendWritePatternMessage(pattern, bank - 1, loc - 1)
+            self.dataLink.sendWritePatternMessage(pattern, bank - 1, loc - 1)    
+            self.controller.updateStatusText('Pattern written to bank: ' + str(bank) + ' loc: ' + str(loc))
+            return True
         except BadPacketException, e:
             self.controller.updateStatusText('Packet error occured: ' + str(e))
+            return False
         except AttributeError, e:
-            self.controller.updateStatusText('Error: No serial port available.  Please choose a serial port from the Serial menu.') 
+            self.controller.updateStatusText('Error: No serial port available.  Please choose a serial port from the Serial menu.')
+            return False
 
     def backupAllPatterns(self, toFile):
         pf = PatternFile.PatternFile()

@@ -38,7 +38,6 @@ X0X_PATT_MSG = '\x19'
 
 class DataLink:
     def __init__ (self, serialPort):
-        print 'Initializing datalink'
         self.s = serialPort
 
 #----------------------- Basic Packet Sending Primitives --------------------

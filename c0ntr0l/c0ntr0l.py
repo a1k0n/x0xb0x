@@ -96,6 +96,7 @@ class x0xc0ntr0l_App(wxApp):
 
     def OnExit(self):
         # Save the configuration to file and exit.
+
         self.v.destroy()
         self.m.destroy()
         self.c.destroy()

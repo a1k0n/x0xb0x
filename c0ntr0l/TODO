@@ -26,6 +26,8 @@ Low hanging fruit:
 
 
 
+Programming Tasks and BUGS
+--------------------------
 
 In addition to the high level todo items above, there are several tasks that 
 need to be complete before the software is released at all.  This includes both
@@ -48,7 +50,8 @@ bugs and incomplete features.
   overwrite existing data.  Make this work in conjunction with tabbing
   around the window and highlighting text.
 
-- Fix the C++ exceptions that occur when the program is exiting.
+- After a pattern is loaded, keyboard focus should be on the pattern
+  edit grid (and maybe this should always be true...)
 
 - Clean everything up!
 
