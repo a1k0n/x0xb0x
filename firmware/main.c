@@ -570,6 +570,7 @@ int main(void) {
       putstring("rAnD0m\n\r");
       sync = INTERNAL_SYNC;
       turn_on_tempo();
+      clear_all_leds();
       //dinsync_start();
       while (1) {
 	read_switches();
@@ -582,8 +583,13 @@ int main(void) {
       }
       break;
     }
+    case A_FUNC:
+    case B_FUNC:
+    case C_FUNC:
+      clear_all_leds();
+      clock_leds();
     default:
-      //putstring(" "); putnum_ud(function);
+      //putstring("???"); putnum_ud(function);
       // something else
       break;
     }
@@ -817,7 +823,7 @@ void ioinit() {
   DDRA = 0xC0;              // led latch (o), rotary com (o), rot1, rot2, rot4, ro8, tempoa, tempob 
   PORTA = 0x3C;              // pullups on rotary1,2,4,8
   
-  DDRB = 0xB7;              // spi_clk, spi_in, spi_out, NC, RX, TX, NC, switch latch (o)
+  DDRB = 0xBB;              // spi_clk, spi_in, spi_out, NC, TX, RX, NC, switch latch (o)
   PORTB = 0x0;
 
   DDRC = 0xFF;              // accent, slide, note[0-5]

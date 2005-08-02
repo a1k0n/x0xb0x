@@ -32,6 +32,7 @@
 
 #include <inttypes.h>
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #include <stdio.h>
 #include "switch.h"
 #include "led.h"
@@ -156,26 +157,29 @@ void read_switches() {
 void read_keypad(uint8_t *switchinput) {
   uint8_t i;
 
+  cli();
+
   cbi(SWITCH_LATCH_PORT, SWITCH_LATCH_PIN);
   NOP; NOP; NOP; NOP;
   sbi(SWITCH_LATCH_PORT, SWITCH_LATCH_PIN);
-
   for (i=0; i<3; i++) {
     SPDR = 0;
     while (!(SPSR & (1<<SPIF)));
     switchinput[i] = SPDR;
   }
   //printf("got %2x %2x %2x\n\r", switches[2], switches[1], switches[0]);
+
+  sei();
 }
 
 // we need to call this, then wait a bit, then read the value off the pins
 void select_bank_read(void) {
-  cbi(BANK_COMMON_PORT, BANK_COMMON_PIN);
+  BANK_COMMON_PORT &= ~_BV(BANK_COMMON_PIN);
 }
 
 // we need to call this, then wait a bit, then read the value off the pins
 void select_func_read(void) {
-  sbi(FUNC_COMMON_PORT, FUNC_COMMON_PIN);
+  FUNC_COMMON_PORT |= _BV(FUNC_COMMON_PIN);
 }
 
 uint8_t read_bank() {

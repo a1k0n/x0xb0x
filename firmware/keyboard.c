@@ -68,7 +68,7 @@ void do_keyboard_mode(void) {
   uint8_t i, last_bank;
   
   // turn tempo off!
-  turn_off_tempo();
+  turn_on_tempo();
   
   clear_bank_leds();
   last_bank = bank;
@@ -120,7 +120,7 @@ void do_keyboard_mode(void) {
     }
 
     if (just_pressed(KEY_UP)) {
-      if (shift < 1)
+      if (shift < 2)
 	shift++;
     } else if (just_pressed(KEY_DOWN)) {
       if (shift > -1)

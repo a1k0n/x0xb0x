@@ -105,7 +105,7 @@ SIGNAL(SIG_USART1_RECV) {
   uint16_t size;
   char c = UDR1;
 
-  set_bank_led(15); clock_leds();
+  //set_bank_led(15); clock_leds();
  
   if (CTS) {
     if (recv_msg_i < UART_BUFF_SIZE) {
@@ -118,7 +118,7 @@ SIGNAL(SIG_USART1_RECV) {
 
       send_status(recv_msg_i);
       recv_msg_i = 0;
-      set_bank_led(14); clock_leds();
+      //set_bank_led(14); clock_leds();
     }
     
     /* The header has been received.  Start grabbing the content
@@ -148,7 +148,7 @@ SIGNAL(SIG_USART1_RECV) {
 
 	switch (cmd) {
 	case PING_MSG:
-	  set_bank_led(2); clock_leds();
+	  //set_bank_led(2); clock_leds();
 	  //putstring("got ping\n\r");
 	  send_status(0x1);
 	  break;
@@ -157,7 +157,7 @@ SIGNAL(SIG_USART1_RECV) {
 	  uint8_t bank, patt, i;
 	  uint16_t addr;
 	
-	  set_bank_led(3); clock_leds();
+	  //set_bank_led(3); clock_leds();
 	  if (recv_msg_buff[2] != RD_PATT_MSG_LEN) {
 	    send_status(0);
 	    break;
@@ -193,7 +193,7 @@ SIGNAL(SIG_USART1_RECV) {
 	  uint8_t bank, patt, i;
 	  uint16_t addr;
 
-	  set_bank_led(4); clock_leds();
+	  //set_bank_led(4); clock_leds();
 	  if (recv_msg_buff[2] != WR_PATT_MSG_LEN) {
 	    send_status(0);
 	    break;
@@ -218,9 +218,12 @@ SIGNAL(SIG_USART1_RECV) {
 	  send_status(1);
 	  break;
 	}
+
 	default:
 	  send_status(0);
 	  break;
+
+
 	}
 	recv_msg_i = 0; // start over!
       }

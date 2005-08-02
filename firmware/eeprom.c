@@ -43,6 +43,8 @@ void spieeprom_write(uint8_t data, uint16_t addr) {
 
   //printf("writing %x to 0x%x\n\r", data, addr);
   /* check if there is a write in progress, wait */
+  cli();
+
   do {
     cbi(SPIEE_CS_PORT, SPIEE_CS_PIN); // pull CS low
     NOP; NOP; NOP; NOP;
@@ -56,6 +58,7 @@ void spieeprom_write(uint8_t data, uint16_t addr) {
     sbi(SPIEE_CS_PORT, SPIEE_CS_PIN); // pull CS high
     //printf("status =  0x%x\n\r", status);
     NOP; NOP;NOP; NOP;
+    
   } while ((status & 0x1) != 0);
   /* set the spi write enable latch */
 
@@ -89,10 +92,13 @@ void spieeprom_write(uint8_t data, uint16_t addr) {
   NOP;
 
   sbi(SPIEE_CS_PORT, SPIEE_CS_PIN); // pull CS low  
+  sei();
 }
 
 uint8_t spieeprom_read(uint16_t addr) {
   uint8_t data;
+
+  cli();
 
   cbi(SPIEE_CS_PORT, SPIEE_CS_PIN); // pull CS low
   NOP; NOP;
@@ -114,5 +120,6 @@ uint8_t spieeprom_read(uint16_t addr) {
   //printf("got %x\n\r", data);
 
   sbi(SPIEE_CS_PORT, SPIEE_CS_PIN); // pull CS high
+  sei();
   return data;
 }

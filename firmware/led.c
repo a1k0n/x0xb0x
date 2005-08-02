@@ -31,6 +31,7 @@
  */
 
 #include <inttypes.h>
+#include <avr/interrupt.h>
 #include <avr/io.h>
 #include <stdio.h>
 #include "main.h"
@@ -130,6 +131,12 @@ void set_led_blink(uint8_t ledno) {
   blinkleds[ledno / 8] |= 1 << (ledno % 8);
 }
 
+void clear_led_blink(uint8_t ledno) {
+  if (ledno >= MAX_LED)
+    return;
+  blinkleds[ledno / 8] &= ~_BV(ledno % 8);
+}
+
 uint8_t is_led_blink(uint8_t ledno) {
   if (ledno >= MAX_LED)
     return 0;
@@ -148,6 +155,7 @@ int is_led_set(uint8_t ledno) {
 
 void clear_all_leds(void) {
   leds[0] = leds[1] = leds[2] = leds[3] = leds[4] = 0;
+  blinkleds[0] = blinkleds[1] = blinkleds[2] = blinkleds[3] = blinkleds[4] = 0;
 }
 
 // bank leds (strip of 16 above keys)
@@ -342,15 +350,18 @@ void set_note_led(uint8_t note) {
   }
 }
 
+
 void clock_leds(void) {
   int i;
 
+  cli();
   cbi(LED_LATCH_PORT, LED_LATCH_PIN);
   for (i=0; i<5; i++) {
     SPDR = leds[i];
     while (!(SPSR & (1<<SPIF)));
   }
   sbi(LED_LATCH_PORT, LED_LATCH_PIN);
+  sei();
 }
 
 void blink_leds_on(void) {
@@ -378,10 +389,16 @@ void clear_blinking_leds(void) {
 }
 
 void display_octave_shift(int8_t shift) {
-  clear_led(LED_UP);
   clear_led(LED_DOWN);
-  if (shift == 1)
-    set_led(LED_UP);
-  else if (shift == -1)
-    set_led(LED_DOWN);
+  if (shift == 2) {
+    set_led_blink(LED_UP);
+  } else {
+    clear_led(LED_UP);
+    clear_led_blink(LED_UP);
+
+    if (shift == 1) 
+      set_led(LED_UP);
+    else if (shift == -1)
+      set_led(LED_DOWN);
+  }
 }

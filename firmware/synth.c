@@ -79,8 +79,8 @@ void note_on(uint8_t note, uint8_t slide, uint8_t accent) {
   }
   else {
     // gate is not restruck during rest, and note is not latched, but one can
-    // slide to/from a rest
-    NOTE_PORT = slide;
+    // slide to/from a rest and rests can have accent (tip to memology)
+    NOTE_PORT = slide | accent;
   }
 
   // Debugging: print out notes as they are played
