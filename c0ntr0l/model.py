@@ -31,10 +31,14 @@ class Model:
         #
         # Meme - Linux support has not yet been implemented here.
         #
+	print "OS is "+os.name
         if os.name == 'posix':
-            self.serialPorts = glob.glob('/dev/cu.*')
+            self.serialPorts = glob.glob('/dev/cu.*') + glob.glob('/dev/tts/ttyUSB*') + glob.glob('/dev/ttyUSB*')
         elif os.name == 'nt':
             self.serialPorts = ['COM1', 'COM2', 'COM3', 'COM4']
+
+        print "Found the following serial ports: "+str(self.serialPorts)
+
 
         #
         # Check to make sure there are valid serial ports.  If not, quit

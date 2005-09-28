@@ -54,6 +54,7 @@ from PatternPlayGrid import PatternPlayGrid
 DEFAULT_MAINWINDOW_SIZE = (600, 556)
 DEFAULT_MAINWINDOW_POS = (150, 150)     # Default position
 
+LABEL_TO_OBJ_PAD = 5
 
 #
 # Widget ID definitions for the event handling system.
@@ -152,75 +153,137 @@ class MainWindow(wxFrame):
         font = wxFont(24, wxTELETYPE, wxNORMAL, wxNORMAL, faceName = "Courier")
         logo.SetFont(font)
         logo.SetSize(logo.GetBestSize())
+        logo.SetPosition((DEFAULT_MAINWINDOW_SIZE[0] - logo.GetSize()[0] - 20, 20))
 
-        divider1 = wxStaticLine(self, -1, pos = (15,55), size = (569,1), style = wxLI_HORIZONTAL)
-        divider2 = wxStaticLine(self, -1, pos = (15,277), size = (569,1), style = wxLI_HORIZONTAL)
+        biglabelfont = wxFont(14, wxTELETYPE, wxNORMAL, wxNORMAL, faceName = "Courier")
+
         divider3 = wxStaticLine(self, -1, pos = (15,442), size = (569,1), style = wxLI_HORIZONTAL)
-        
-        label1 = wxStaticText(self, -1, "Pattern Edit", (20, 64))
-        label2 = wxStaticText(self, -1, "Pattern Play", (20, 286))
         label3 = wxStaticText(self, -1, "Global Parameters", (20, 450))
+        label3.SetFont(biglabelfont)
 
         #
         # ==== Pattern Edit Section ====
         #
 
-        font = wxFont(11, wxDEFAULT, wxNORMAL, wxNORMAL)
+        divider1 = wxStaticLine(self, -1, pos = (15,55), size = (569,1), style = wxLI_HORIZONTAL)
 
-        # Bank select control
-        pe_label1 = wxStaticText(self, -1, "Bank:", (36, 228), style = wxALIGN_RIGHT)
-        pe_label1.SetFont(font)
-        pe_label1.SetSize(pe_label1.GetBestSize())
+        
+        label1 = wxStaticText(self, -1, "Pattern Edit", (20, 64))
+        label1.SetFont(biglabelfont)
 
+        #
+        # Pattern Edit Grid
+        #
+        loc = (label1.GetPosition()[0] +  50,
+               label1.GetPosition()[1] + label1.GetSize()[1] + 20)
+        self.patternEditGrid = PatternEditGrid(self, loc)
+
+        
+        labelfont = wxFont(11, wxDEFAULT, wxNORMAL, wxNORMAL)
+        smallfont = wxFont(8, wxDEFAULT, wxNORMAL, wxNORMAL)
+
+        # Bank select control       
         bankStrings = []
         for i in range(1, NUMBER_OF_BANKS + 1):
             bankStrings.append(str(i))
         self.pe_bankText = wxChoice(self, ID_PE_BANK_TEXT,
-                                      (71, 225), (58,19),
-                                      choices = bankStrings)
+                                    (71,
+                                     self.patternEditGrid.GetPosition()[1] +
+                                     self.patternEditGrid.GetSize()[1] + 15),
+                                    (0,0),
+                                    choices = bankStrings)
+        self.pe_bankText.SetFont(smallfont)
+        self.pe_bankText.SetSize((60, self.pe_bankText.GetBestSize()[1] - 3))
+        
         self.Bind(wx.EVT_CHOICE, self.HandleChoiceAction, self.pe_bankText)
+
+        pe_label1 = wxStaticText(self, -1, "Bank:", (36, 228),
+                                 style = wxALIGN_RIGHT)
+        pe_label1.SetFont(labelfont)
+        pe_label1.SetSize(pe_label1.GetBestSize())
+        pe_label1.SetPosition((self.pe_bankText.GetPosition()[0] -
+                               LABEL_TO_OBJ_PAD -
+                               pe_label1.GetSize()[0],
+                               self.pe_bankText.GetPosition()[1] + 3));
         
         # Location Select Control
-        pe_label2 = wxStaticText(self, -1, "Location:", (18, 253), style = wxALIGN_RIGHT)
-        pe_label2.SetFont(font)
-        pe_label2.SetSize(pe_label2.GetBestSize())
-
+        locStrings = []
+        for i in range(1, LOCATIONS_PER_BANK + 1):
+            locStrings.append(str(i))
         self.pe_locText = wxChoice(self, ID_PE_LOC_TEXT, 
-                                   (71, 250), (59,19),
-                                   choices = bankStrings)
+                                   (self.pe_bankText.GetPosition()[0],
+                                    self.pe_bankText.GetPosition()[1] +
+                                    self.pe_bankText.GetSize()[1] + 7),
+                                   (0,0),
+                                   choices = locStrings)
+        self.pe_locText.SetFont(smallfont)
+        self.pe_locText.SetSize((60, self.pe_locText.GetBestSize()[1] - 3))
         self.Bind(wx.EVT_CHOICE, self.HandleChoiceAction, self.pe_locText)
-        
-        # Save button
-        self.pe_SaveButton = wxButton(self, ID_SAVE_PATTERN_BUTTON, "Save Pattern", (484, 251), (100, 17))
-        self.pe_SaveButton.Disable()
-        self.Bind(wx.EVT_BUTTON, self.HandleButtonAction, self.pe_SaveButton)
 
+        pe_label2 = wxStaticText(self, -1, "Loc:", (18, 253), style = wxALIGN_RIGHT)
+        pe_label2.SetFont(labelfont)
+        pe_label2.SetSize(pe_label2.GetBestSize())
+        pe_label2.SetPosition((self.pe_locText.GetPosition()[0] -
+                               LABEL_TO_OBJ_PAD -
+                               pe_label2.GetSize()[0],
+                               self.pe_locText.GetPosition()[1] + 3));
 
         # Pattern length control
-        pe_label2 = wxStaticText(self, -1, "Pattern Length:", (450, 228), style = wxALIGN_RIGHT)
-        pe_label2.SetFont(font)
-        pe_label2.SetSize(pe_label2.GetBestSize())
-
+       
 
         textValidator = TextValidator(map(str, range(1, NOTES_IN_PATTERN + 1)))        
-        self.lengthText = wxTextCtrl(self, ID_LENGTH_TEXT, str(NOTES_IN_PATTERN), (542, 225), (39,19),
+        self.lengthText = wxTextCtrl(self, ID_LENGTH_TEXT,
+                                     str(NOTES_IN_PATTERN),
+                                     (self.patternEditGrid.GetPosition()[0]+
+                                      self.patternEditGrid.GetSize()[0] - 40,
+                                      self.pe_bankText.GetPosition()[1]),
+                                     (39,19),
                                      style = (wxTE_PROCESS_ENTER),
                                      validator = textValidator)
         self.lengthText.Disable()
         self.Bind(wx.EVT_TEXT_ENTER, self.HandleTextEnterEvent)
 
-        
+        pe_label2 = wxStaticText(self, -1, "Pattern Length:",
+                                 (450, self.pe_bankText.GetPosition()[1]),
+                                 style = wxALIGN_RIGHT)
+        pe_label2.SetFont(labelfont)
+        pe_label2.SetSize(pe_label2.GetBestSize())
+
+        pe_label2.SetPosition((self.lengthText.GetPosition()[0] -
+                              pe_label2.GetSize()[0] - 5,
+                               self.pe_bankText.GetPosition()[1] + 3));
+
 #        EVT_TEXT(self.lengthText, self.HandleKeyAction)
 #        EVT_KEY_DOWN(self.lengthText, self.HandleKeyAction)
+
+        # Save button
+        self.pe_SaveButton = wxButton(self, ID_SAVE_PATTERN_BUTTON,
+                                      "Save Pattern",
+                                      (self.patternEditGrid.GetPosition()[0]+
+                                       self.patternEditGrid.GetSize()[0] - 100,
+                                       self.lengthText.GetPosition()[1] +
+                                       self.lengthText.GetSize()[1] + 15),
+                                      (0, 0))
+        self.pe_SaveButton.SetFont(smallfont)
+        self.pe_SaveButton.SetSize((100, self.pe_SaveButton.GetBestSize()[1] - 5))
         
-        #
-        # Pattern Edit Grid
-        #
-        self.patternEditGrid = PatternEditGrid(self, (70, 130))
+        self.pe_SaveButton.Disable()
+        self.Bind(wx.EVT_BUTTON, self.HandleButtonAction, self.pe_SaveButton)
+
+
         
         #
         # ==== Pattern Play Section ====
         #
+        divider2 = wxStaticLine(self, -1,
+                                pos = (15, self.pe_SaveButton.GetPosition()[1] +
+                                       self.pe_SaveButton.GetSize()[1] + 15),
+                                size = (569,1), style = wxLI_HORIZONTAL)
+        label2 = wxStaticText(self, -1, "Pattern Play",
+                              (divider2.GetPosition()[0]+5,
+                               divider2.GetPosition()[1]+5))
+        label2.SetFont(biglabelfont)
+
         self.patternPlayGrid = PatternPlayGrid(self)
 
         for i in range(1,9):
@@ -237,7 +300,7 @@ class MainWindow(wxFrame):
         self.Bind(wx.EVT_BUTTON, self.HandleButtonAction, pp_button2)
         
         pp_label1 = wxStaticText(self, -1, "Bank:", (436, 415), style = wxALIGN_RIGHT)
-        pp_label1.SetFont(font)
+        pp_label1.SetFont(labelfont)
         pp_label1.SetSize(pp_label1.GetBestSize())
 
         textValidator = TextValidator(map(str, range(1, NUMBER_OF_BANKS + 1))) 
@@ -251,7 +314,7 @@ class MainWindow(wxFrame):
         # window.
         #
         tempoText = wxStaticText(self, -1, "Tempo:", (27, 486), style = wxALIGN_LEFT)
-        tempoText.SetFont(font)
+        tempoText.SetFont(labelfont)
         tempoText.SetSize(pe_label2.GetBestSize())
 
 #        textValidator = TextValidator(map(str, range(1, NOTES_IN_PATTERN + 1)))        
@@ -261,7 +324,7 @@ class MainWindow(wxFrame):
 
 
         syncText = wxStaticText(self, -1, "Select sync mode:", (350, 486), style = wxALIGN_LEFT)
-        syncText.SetFont(font)
+        syncText.SetFont(labelfont)
         syncText.SetSize(syncText.GetBestSize())
         
         syncList = [SYNCMSG_OUT, SYNCMSG_IN_MIDI, SYNCMSG_IN_DIN]
