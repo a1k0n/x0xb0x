@@ -1,8 +1,3 @@
-
-# Josh Lifton and Michael Broxton
-# MIT Media Lab
-# Copyright (c) 2002-2004. All rights reserved.
-#
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
 # "Software"), to deal in the Software without restriction, including
@@ -31,10 +26,10 @@
 #               This includes menus, the main window, the buttons and controls,
 #               and the status bar. 
 #
-# Author:       Michael Broxton 
+# Author:       Michael Broxton & Limor Fried
 #
 # Created:      A long time ago, in a galaxy far, far away...
-# Copyright:    (c) 2004 by MIT Media Laboratory
+# Copyright:    (c) 2005 by MIT Media Laboratory
 #----------------------------------------------------------------------------
 
 
@@ -63,6 +58,13 @@ ID_MAIN_WINDOW = wxNewId()
 
 ID_FILE_EXIT = wxNewId() 
 ID_FILE_ABOUT = wxNewId()
+
+ID_EDIT_CUT = wxNewId()
+ID_EDIT_COPY = wxNewId()
+ID_EDIT_PASTE = wxNewId()
+ID_EDIT_SHIFTR = wxNewId()
+ID_EDIT_SHIFTL = wxNewId()
+
 ID_X0XB0X_UPLOAD_FIRMWARE = wxNewId()
 ID_X0XB0X_DUMP_EEPROM = wxNewId()
 ID_X0XB0X_RESTORE_EEPROM = wxNewId()
@@ -132,7 +134,9 @@ class MainWindow(wxFrame):
         self.currentBank = 0
         self.currentLoc = 0
 
-
+        # create a clipboard/buffer to hold copied patterns
+        self.pattern_clipboard = 0
+        
         #
         # Once everything has been set up, show the frame.
         #
@@ -286,15 +290,22 @@ class MainWindow(wxFrame):
 
         self.patternPlayGrid = PatternPlayGrid(self)
 
+        # Man, couldnt you put this in the widget -- ada
         for i in range(1,9):
             wxStaticText(self, -1, str(i), (96 + (i-1)*515/8, 318))
         wxStaticText(self, -1, "Pattern:", (17, 362))
-
+        
 
         #
         # Other controls and buttons in the Pattern Play section
         #
-        pp_button1 = wxButton(self, ID_RUNSTOP_BUTTON, "R/S", (75, 413), (66, 17))
+        pp_button1 = wxButton(self, ID_RUNSTOP_BUTTON, "R/S");
+        pp_button1.SetFont(smallfont)
+        pp_button1.SetPosition((self.patternPlayGrid.GetPosition()[0] + 3,
+                                self.patternPlayGrid.GetPosition()[1] +
+                                self.patternPlayGrid.GetSize()[1] + 5))
+        pp_button1.SetSize((pp_button1.GetBestSize()[0],
+                            pp_button1.GetBestSize()[1]- 5))
         pp_button2 = wxButton(self, ID_PP_LOAD_BANK_BUTTON, "Load", (518, 413), (66, 17))
         self.Bind(wx.EVT_BUTTON, self.HandleButtonAction, pp_button1)
         self.Bind(wx.EVT_BUTTON, self.HandleButtonAction, pp_button2)
@@ -365,6 +376,15 @@ class MainWindow(wxFrame):
         menubar.Append(menu, "File")
 
         menu = wxMenu()
+        menu.Append(ID_EDIT_CUT, "Cut Pattern\tCTRL_X", "Cut pattern from EEPROM")
+        menu.Append(ID_EDIT_COPY, "Copy Pattern\tCTRL-C", "Copy pattern from EEPROM")
+        menu.Append(ID_EDIT_PASTE, "Paste Pattern\tCTRL-V", "Paste pattern to EEPROM")
+        menu.AppendSeparator()
+        menu.Append(ID_EDIT_SHIFTR, "Shift Right\tSHIFT-ARROW-RIGHT", "Shift pattern one step to the right")
+        menu.Append(ID_EDIT_SHIFTL, "Shift Left\tSHIFT-ARROW-LEFT", "Shift pattern one step to the left")
+        menubar.Append(menu, "Edit")
+        
+        menu = wxMenu()
         menu.Append(ID_X0XB0X_UPLOAD_FIRMWARE, "Upload firmware...\tCTRL-U", "Upload a new .HEX file to the x0xb0x firmware")
         menu.AppendSeparator()
         menu.Append(ID_X0XB0X_DUMP_EEPROM, "Backup EEPROM", "Backup EEPROM to the hard disk")
@@ -389,6 +409,13 @@ class MainWindow(wxFrame):
         # 
         EVT_MENU(self, ID_FILE_ABOUT, self.HandleMenuAction)
         EVT_MENU(self, ID_FILE_EXIT, self.HandleMenuAction)
+
+        EVT_MENU(self, ID_EDIT_CUT, self.HandleMenuAction)
+        EVT_MENU(self, ID_EDIT_COPY, self.HandleMenuAction)
+        EVT_MENU(self, ID_EDIT_PASTE, self.HandleMenuAction)
+        EVT_MENU(self, ID_EDIT_SHIFTR, self.HandleMenuAction)
+        EVT_MENU(self, ID_EDIT_SHIFTL, self.HandleMenuAction)
+
         EVT_MENU(self, ID_X0XB0X_RECONNECT_SERIAL, self.HandleMenuAction)
         EVT_MENU(self, ID_X0XB0X_PING, self.HandleMenuAction)
         EVT_MENU(self, ID_X0XB0X_UPLOAD_FIRMWARE, self.HandleMenuAction)
@@ -553,8 +580,32 @@ class MainWindow(wxFrame):
         elif event.GetId() == ID_FILE_EXIT:
             self.Close(true)
 
+        # Edit menu
+        elif event.GetId() == ID_EDIT_COPY:
+            self.pattern_clipboard = self.patternEditGrid.getPattern()
+        elif event.GetId() == ID_EDIT_CUT:
+            self.pattern_clipboard = self.patternEditGrid.getPattern()
+            self.pe_SaveButton.Enable()
+        elif event.GetId() == ID_EDIT_PASTE:
+            if (self.pattern_clipboard != 0):
+                self.patternEditGrid.update(self.pattern_clipboard)
+                self.pe_SaveButton.Enable()
+            else:
+                print("nothing in clipboard!\n")
+
+        elif event.GetId() == ID_EDIT_SHIFTR:
+            tmp = self.patternEditGrid.getPattern()
+            tmp.shift(-1)
+            self.patternEditGrid.update(tmp)
+            self.pe_SaveButton.Enable()
+        elif event.GetId() == ID_EDIT_SHIFTL:
+            tmp = self.patternEditGrid.getPattern()
+            tmp.shift(1)
+            self.patternEditGrid.update(tmp)
+            self.pe_SaveButton.Enable()
+                            
         elif event.GetId() == ID_X0XB0X_RECONNECT_SERIAL:
-            print "reconnectiong"
+            print "Reconnecting"
             self.controller.closeSerialPort()
             self.controller.openSerialPort()
 
@@ -587,12 +638,14 @@ class MainWindow(wxFrame):
 
         elif event.GetId() == ID_X0XB0X_RESTORE_EEPROM:
             #
-            # Retore EEPROM
+            # Restore EEPROM
             #
             d = wxFileDialog(self, 'Choose a x0xb0x EEPROM image file', style = wxOPEN, wildcard = "x0xb0x pattern files (*.xbp)|*.xbp|All files (*.*)|*.*")
             d.ShowModal()
             if len(d.GetPath()) != 0:
                 self.controller.restoreAllPatterns(d.GetPath())
+            # the current pattern may have changed, reeeeload it!
+            self.LoadPattern()
 
         elif event.GetId() == ID_X0XB0X_ERASE_EEPROM:
             dlg = wxMessageDialog(self,

@@ -16,6 +16,23 @@ class Pattern:
         note = Note()
         note.parseNoteArgs(noteNum, accent, slide, transpose)
         self.notes.append(note)
+
+    def shift(self, shiftamt):
+        while (shiftamt != 0):
+            if (shiftamt > 0):
+                tempnote = self.notes[0]
+                for i in range( 0, self.length() - 1 ):
+                    self.notes[i] = self.notes[i+1]
+                self.notes[self.length()-1] = tempnote
+                shiftamt-=1
+            if (shiftamt < 0):
+                tempnote = self.notes[self.length() - 1]
+                for i in range(1, self.length() ):
+                    self.notes[self.length()-i] = self.notes[self.length()-1-i]
+                self.notes[0] = tempnote
+                shiftamt+=1
+
+
         
     #
     # Init with a pattern
