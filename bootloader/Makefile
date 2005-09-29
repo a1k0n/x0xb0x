@@ -56,3 +56,6 @@ program:
 
 verify:
 	$(AVRDUDE) $(AVRDUDE_FLAGS) -U flash:v:x0xb0x_full.hex
+
+read:
+	$(AVRDUDE) $(AVRDUDE_FLAGS) -U flash:r:x0xb0x_full.hex
