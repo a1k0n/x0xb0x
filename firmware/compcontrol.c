@@ -44,6 +44,7 @@
 extern volatile uint8_t pattern_buff[PATT_SIZE];
 
 extern uint8_t function, bank, switches[3];
+extern uint16_t tempo;
 
 #define function_changed (function != COMPUTER_CONTROL_FUNC)
 
@@ -153,6 +154,25 @@ SIGNAL(SIG_USART1_RECV) {
 	  send_status(0x1);
 	  break;
 	  
+	case GET_TEMPO_MSG:
+	  send_tempo(tempo);
+	  break;
+
+	case SET_TEMPO_MSG: {
+	  uint16_t t;
+
+	  if (recv_msg_buff[2] != TEMPO_MSG_LEN) {
+	    send_status(0);
+	    break;
+	  }
+	  t = recv_msg_buff[3];
+	  t <<= 8;
+	  t += recv_msg_buff[4];
+
+	  change_tempo(t);
+
+	  break;
+	}	  
 	case RD_PATT_MSG: {
 	  uint8_t bank, patt, i;
 	  uint16_t addr;
@@ -251,16 +271,16 @@ void send_status(uint8_t stat) {
   send_msg(tx_msg_buff, 5);
 }
 
-void send_tempo(uint16_t tempo) {
+void send_tempo(uint16_t t) {
 
   tx_msg_buff[0] = TEMPO_MSG;
   tx_msg_buff[1] = 0;
   tx_msg_buff[2] = TEMPO_MSG_LEN;
-  tx_msg_buff[3] = tempo >> 8;
-  tx_msg_buff[4] = tempo && 0xFF;
+  tx_msg_buff[3] = t >> 8;
+  tx_msg_buff[4] = t & 0xFF;
   tx_msg_buff[5] = calc_CRC8(tx_msg_buff, 5);
 
-  send_msg(tx_msg_buff, 5);
+  send_msg(tx_msg_buff, TEMPO_MSG_LEN + 4);
 }
 
 
