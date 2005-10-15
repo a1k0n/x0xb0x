@@ -36,9 +36,10 @@
 #define NOP asm("nop")
 
 #define CLK_CALIBRATION_EEADDR 0x1
-#define TEMPO_EEADDR 0x2
 #define MIDIIN_ADDR_EEADDR 0x3
 #define MIDIOUT_ADDR_EEADDR 0x4
+#define TEMPO_EEADDR 0x5  // 2 bytes
+
 #define BOOTLOADER_ADDR 0x3E00UL // 0x1F00 word, 15872 byte
 
 #define INTERNAL_SYNC 0

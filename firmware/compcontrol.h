@@ -35,6 +35,7 @@ uint8_t calc_CRC8(uint8_t *buff, uint16_t size);
 uint8_t input_uint8(void);
 void send_msg(uint8_t *buff, uint16_t len);
 void send_status(uint8_t stat);
+void send_tempo(uint16_t tempo);
 
 #define PING_MSG 0x01
 #define PING_MSG_LEN 0
@@ -49,6 +50,8 @@ void send_status(uint8_t stat);
 #define RD_PATT_MSG_LEN 2
 #define LOAD_PATT_MSG 0x12
 #define GET_PATT_MSG  0x13
+#define PLAY_PATT_MSG 0x14
+#define STOP_PATT_MSG 0x15
 
 #define WR_TRACK_MSG 0x20
 #define RD_TRACK_MSG 0x21
@@ -61,5 +64,7 @@ void send_status(uint8_t stat);
 #define GET_SEQ_MSG 0x32
 #define SET_SYNC_MSG 0x33
 
-#define GET_TEMPO 0x40#
-#define SET_TEMPO 0x41
+#define GET_TEMPO_MSG 0x40
+#define SET_TEMPO_MSG 0x41
+#define TEMPO_MSG 0x42
+#define TEMPO_MSG_LEN 2

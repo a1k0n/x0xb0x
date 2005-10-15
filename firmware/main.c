@@ -510,64 +510,64 @@ int main(void) {
     read_switches();
     switch (function) {
     case COMPUTER_CONTROL_FUNC:
-      putstring("CompControl\n\r");
+      //putstring("CompControl\n\r");
       sync = INTERNAL_SYNC;
       do_computer_control();
       break;
     case EDIT_PATTERN_FUNC:
-      putstring("PattEdit\n\r");
+      //putstring("PattEdit\n\r");
       sync = INTERNAL_SYNC;
       do_pattern_edit();
       break;
     case PLAY_PATTERN_FUNC:
-      putstring("PattPlay\n\r");
+      //putstring("PattPlay\n\r");
       sync = INTERNAL_SYNC;
       do_patterntrack_play();
       break;
     case PLAY_PATTERN_DINSYNC_FUNC:
-      putstring("PattPlay DINSYNC\n\r");
+      //putstring("PattPlay DINSYNC\n\r");
       sync = DIN_SYNC;
       do_patterntrack_play();
       break;
     case PLAY_PATTERN_MIDISYNC_FUNC:
-      putstring("PattPlay MidiSYNC\n\r");
+      //putstring("PattPlay MidiSYNC\n\r");
       sync = MIDI_SYNC;
       do_patterntrack_play();
       break;
     case EDIT_TRACK_FUNC:
-      putstring("TrackEdit\n\r");
+      //putstring("TrackEdit\n\r");
       sync = INTERNAL_SYNC;
       do_track_edit();
       break;
     case PLAY_TRACK_FUNC: 
-      putstring("TrackPlay\n\r");
-     sync = INTERNAL_SYNC;
+      //putstring("TrackPlay\n\r");
+      sync = INTERNAL_SYNC;
       do_patterntrack_play();
       break;
     case PLAY_TRACK_DINSYNC_FUNC:
-      putstring("TrackPlay DINSYNC\n\r");
+      //putstring("TrackPlay DINSYNC\n\r");
       sync = DIN_SYNC;
       do_patterntrack_play();
       break;
     case PLAY_TRACK_MIDISYNC_FUNC:
-      putstring("TrackPlay MIDISync\n\r");
+      //putstring("TrackPlay MIDISync\n\r");
       sync = MIDI_SYNC;
       do_patterntrack_play();
       break;
     case MIDI_CONTROL_FUNC:
-      putstring("MIDIControl\n\r");
+      //putstring("MIDIControl\n\r");
       sync = INTERNAL_SYNC;
       do_midi_mode();
       break;
     case KEYBOARD_MODE_FUNC:
-      putstring("Keyboard\n\r");
+      //putstring("Keyboard\n\r");
       sync = INTERNAL_SYNC;
       do_keyboard_mode();
       break;
     case RANDOM_MODE_FUNC: {
       //uint8_t dinsync_started = 0; // stopped
       //uint8_t dinsync_lastpulse = 0; // 
-      putstring("rAnD0m\n\r");
+      //putstring("rAnD0m\n\r");
       sync = INTERNAL_SYNC;
       turn_on_tempo();
       clear_all_leds();
@@ -608,7 +608,8 @@ void init_tempo(void) {
   sbi(PCMSK0, PCINT1); // detect change on pin A1
   sbi(GICR, PCIE0);    // enable pin change interrupt for tempo knob detect
 
-  change_tempo(internal_eeprom_read8(TEMPO_EEADDR));
+  change_tempo((internal_eeprom_read8(TEMPO_EEADDR)<< 8) |
+	       internal_eeprom_read8(TEMPO_EEADDR+1) );
   note_counter = 0;
   sbi(ETIMSK, TOIE3); // enable tempo interrupt
 }
@@ -640,10 +641,15 @@ void change_tempo(uint16_t set_tempo) {
   }
 
   newtempo = tempo = set_tempo;
-  internal_eeprom_write8(TEMPO_EEADDR, tempo);
-  putnum_ud(tempo);
-  putstring(" BPM\n\r");
-  
+  internal_eeprom_write8(TEMPO_EEADDR, tempo >> 8);
+  internal_eeprom_write8(TEMPO_EEADDR+1, tempo & 0xFF);
+
+  /*
+    putnum_ud(tempo);
+    putstring(" BPM\n\r");
+  */
+  send_tempo(tempo);
+
   // figure out what the interrupt should be!
   // (use counter 3 for finest resolution!)
   num_instr = F_CPU * 60;

@@ -251,6 +251,19 @@ void send_status(uint8_t stat) {
   send_msg(tx_msg_buff, 5);
 }
 
+void send_tempo(uint16_t tempo) {
+
+  tx_msg_buff[0] = TEMPO_MSG;
+  tx_msg_buff[1] = 0;
+  tx_msg_buff[2] = TEMPO_MSG_LEN;
+  tx_msg_buff[3] = tempo >> 8;
+  tx_msg_buff[4] = tempo && 0xFF;
+  tx_msg_buff[5] = calc_CRC8(tx_msg_buff, 5);
+
+  send_msg(tx_msg_buff, 5);
+}
+
+
 void do_computer_control(void) {
 
   while (1) {
