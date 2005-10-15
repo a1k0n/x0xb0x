@@ -15,9 +15,14 @@ import time
 # Messages from the c0ntr0l software to the x0xb0x.
 #
 PING_MSG = '\x01'
+
 WRITE_PATTERN_MSG = '\x10'
 READ_PATTERN_MSG = '\x11'
-LOAD_PATTERN_MSG = '\x04'
+LOAD_PATTERN_MSG = '\x12'
+GET_PATTERN_MSG = '\x12'
+PLAY_PATTERN_MSG = '\x14'
+STOP_PATTERN_MSG = '\x15'
+
 SET_BANK_MSG = '\x05'
 GET_BANK_MSG = '\x06'
 SET_PATTERN_MSG = '\x07'
@@ -35,6 +40,7 @@ CTRL_GET_TEMPO_MSG = '\x0F'
 X0X_PING_MSG = '\x01'
 X0X_STATUS_MSG = '\x80'
 X0X_PATT_MSG = '\x19'
+X0X_TEMPO_MSG = '\x41'
 
 class DataLink:
     def __init__ (self, serialPort):
@@ -83,6 +89,29 @@ class DataLink:
             packet.printMe()
             print 'Bad packet!'
 
+    def sendPlayPatternMessage(self, pattern):
+        #
+        # Convert pattern to binary
+        #
+        self.s.flushInput()
+        self.sendBasicPacket(PLAY_PATTERN_MSG, content = pattern.toByteString())
+        packet = self.getBasicPacket()
+        if packet.isCorrect:
+            packet.printMe()
+        else:
+            packet.printMe()
+            print 'Bad Packet!'
+
+    def sendStopPatternMessage(self):
+        self.s.flushInput()
+        self.sendBasicPacket(STOP_PATTERN_MSG)
+        packet = self.getBasicPacket()
+        if packet.isCorrect:
+            packet.printMe() 
+        else:
+            packet.printMe()
+            print 'Bad packet!'
+            
     def sendReadPatternMessage(self, bank, loc):
         self.s.flushInput()
         self.sendBasicPacket(READ_PATTERN_MSG, content = chr(bank) + chr(loc))

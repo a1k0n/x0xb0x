@@ -201,6 +201,31 @@ class Model:
             self.controller.updateStatusText('Error: No serial port available.  Please choose a serial port from the Serial menu.')
             return False
 
+    # Send a pattern to the x0x and have it loop it up!
+    def playPattern(self, pattern):
+        try:
+            self.dataLink.sendPlayPatternMessage(pattern)
+            self.controller.updateStatusText('Playing pattern')
+            return True;
+        except BadPacketException, e:
+            self.controller.updateStatusText('Packet error occured: ' + str(e))
+            return False
+        except AttributeError, e:
+            self.controller.updateStatusText('Error: No serial port available.  Please choose a serial port from the Serial menu.')
+            return False
+
+    def stopPattern(self, pattern):
+        try:
+            self.dataLink.sendStopPatternMessage()
+            self.controller.updateStatusText('Stopped playing pattern')
+            return True;
+        except BadPacketException, e:
+            self.controller.updateStatusText('Packet error occured: ' + str(e))
+            return False
+        except AttributeError, e:
+            self.controller.updateStatusText('Error: No serial port available.  Please choose a serial port from the Serial menu.')
+            return False
+    
     def backupAllPatterns(self, toFile):
         pf = PatternFile.PatternFile()
         try:

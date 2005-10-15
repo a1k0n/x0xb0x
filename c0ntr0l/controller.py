@@ -73,6 +73,9 @@ class Controller:
     def readPattern(self, bank, loc):
         return self.model.readPattern(bank, loc)
 
+    def playPattern(self, pattern):
+        return self.model.playPattern(pattern)
+            
     def backupAllPatterns(self, tofile):
         return self.model.backupAllPatterns(tofile)
     

@@ -70,6 +70,7 @@ ID_X0XB0X_DUMP_EEPROM = wxNewId()
 ID_X0XB0X_RESTORE_EEPROM = wxNewId()
 ID_X0XB0X_ERASE_EEPROM = wxNewId()
 ID_X0XB0X_RECONNECT_SERIAL = wxNewId()
+ID_X0XB0X_REFRESH_SERIAL = wxNewId()
 ID_X0XB0X_PING = wxNewId()
 
 ID_SERIAL_PORT = 10000
@@ -81,6 +82,7 @@ ID_LENGTH_TEXT = wxNewId()
 ID_TEMPO_TEXT = wxNewId()
 ID_RUNSTOP_BUTTON = wxNewId()
 ID_SAVE_PATTERN_BUTTON = wxNewId()
+ID_PLAY_PATTERN_BUTTON = wxNewId()
 ID_LOAD_PATTERN_BUTTON = wxNewId()
 ID_PP_LOAD_BANK_BUTTON = wxNewId()
 ID_SYNC_CHOICE = wxNewId()
@@ -211,26 +213,25 @@ class MainWindow(wxFrame):
                                self.pe_bankText.GetPosition()[1] + 3));
         
         # Location Select Control
+
+        pe_label2 = wxStaticText(self, -1, "Loc:", (18, 253), style = wxALIGN_RIGHT)
+        pe_label2.SetFont(labelfont)
+        pe_label2.SetSize(pe_label2.GetBestSize())
+        pe_label2.SetPosition((self.pe_bankText.GetPosition()[0] + self.pe_bankText.GetSize()[0] + 15,
+                               pe_label1.GetPosition()[1]));
+        
         locStrings = []
         for i in range(1, LOCATIONS_PER_BANK + 1):
             locStrings.append(str(i))
         self.pe_locText = wxChoice(self, ID_PE_LOC_TEXT, 
-                                   (self.pe_bankText.GetPosition()[0],
-                                    self.pe_bankText.GetPosition()[1] +
-                                    self.pe_bankText.GetSize()[1] + 7),
+                                   (pe_label2.GetPosition()[0] + pe_label2.GetSize()[0] + 5,
+                                    self.pe_bankText.GetPosition()[1]),
                                    (0,0),
                                    choices = locStrings)
         self.pe_locText.SetFont(smallfont)
         self.pe_locText.SetSize((60, self.pe_locText.GetBestSize()[1] - 3))
         self.Bind(wx.EVT_CHOICE, self.HandleChoiceAction, self.pe_locText)
 
-        pe_label2 = wxStaticText(self, -1, "Loc:", (18, 253), style = wxALIGN_RIGHT)
-        pe_label2.SetFont(labelfont)
-        pe_label2.SetSize(pe_label2.GetBestSize())
-        pe_label2.SetPosition((self.pe_locText.GetPosition()[0] -
-                               LABEL_TO_OBJ_PAD -
-                               pe_label2.GetSize()[0],
-                               self.pe_locText.GetPosition()[1] + 3));
 
         # Pattern length control
        
@@ -259,6 +260,19 @@ class MainWindow(wxFrame):
 
 #        EVT_TEXT(self.lengthText, self.HandleKeyAction)
 #        EVT_KEY_DOWN(self.lengthText, self.HandleKeyAction)
+
+        # Play button
+        self.pe_PlayButton = wxButton(self, ID_PLAY_PATTERN_BUTTON,
+                                      "Play Pattern",
+                                      (self.patternEditGrid.GetPosition()[0],
+                                       self.lengthText.GetPosition()[1] +
+                                       self.lengthText.GetSize()[1] + 15),
+                                      (0, 0))
+        self.pe_PlayButton.SetFont(smallfont)
+        self.pe_PlayButton.SetSize((100, self.pe_PlayButton.GetBestSize()[1] - 5))
+        
+        #self.pe_PlayButton.Disable()
+        self.Bind(wx.EVT_BUTTON, self.HandleButtonAction, self.pe_PlayButton)
 
         # Save button
         self.pe_SaveButton = wxButton(self, ID_SAVE_PATTERN_BUTTON,
@@ -398,6 +412,7 @@ class MainWindow(wxFrame):
         menu.Append(ID_X0XB0X_RECONNECT_SERIAL, "Reconnect serial port\tCTRL-R")
         menu.Append(ID_X0XB0X_PING, "Send serial ping\tCTRL-P")
         menu.AppendSeparator()
+        #menu.AppendMenu(ID_X0XB0X_REFRESH_SERIAL, "Refresh serial port list")
         menu.AppendMenu(-1, 'Port', self.portMenu)
         menubar.Append(menu, 'Serial')
         
@@ -417,6 +432,7 @@ class MainWindow(wxFrame):
         EVT_MENU(self, ID_EDIT_SHIFTL, self.HandleMenuAction)
 
         EVT_MENU(self, ID_X0XB0X_RECONNECT_SERIAL, self.HandleMenuAction)
+        EVT_MENU(self, ID_X0XB0X_REFRESH_SERIAL, self.HandleMenuAction)
         EVT_MENU(self, ID_X0XB0X_PING, self.HandleMenuAction)
         EVT_MENU(self, ID_X0XB0X_UPLOAD_FIRMWARE, self.HandleMenuAction)
         EVT_MENU(self, ID_X0XB0X_DUMP_EEPROM, self.HandleMenuAction)
@@ -521,7 +537,8 @@ class MainWindow(wxFrame):
         if event.GetId() == ID_SAVE_PATTERN_BUTTON:
             if self.SavePattern():
                 self.pe_SaveButton.Disable()
-            
+        elif event.GetId() == ID_PLAY_PATTERN_BUTTON:
+            self.controller.playPattern
         elif event.GetId() == ID_RUNSTOP_BUTTON:
             print "R/S"
             self.controller.sendRunStop()
