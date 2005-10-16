@@ -46,7 +46,7 @@ from PatternEditGrid import PatternEditGrid
 from PatternPlayGrid import PatternPlayGrid
 
 
-DEFAULT_MAINWINDOW_SIZE = (600, 556)
+DEFAULT_MAINWINDOW_SIZE = (600, 600)
 DEFAULT_MAINWINDOW_POS = (150, 150)     # Default position
 
 LABEL_TO_OBJ_PAD = 5
@@ -69,9 +69,12 @@ ID_X0XB0X_UPLOAD_FIRMWARE = wxNewId()
 ID_X0XB0X_DUMP_EEPROM = wxNewId()
 ID_X0XB0X_RESTORE_EEPROM = wxNewId()
 ID_X0XB0X_ERASE_EEPROM = wxNewId()
+ID_X0XB0X_CONNECT = wxNewId()
 ID_X0XB0X_RECONNECT_SERIAL = wxNewId()
 ID_X0XB0X_REFRESH_SERIAL = wxNewId()
 ID_X0XB0X_PING = wxNewId()
+
+ID_PORTMENU = wxNewId()
 
 ID_SERIAL_PORT = 10000
 
@@ -80,6 +83,7 @@ ID_PE_LOC_TEXT = wxNewId()
 ID_PE_BANK_TEXT = wxNewId()
 ID_LENGTH_TEXT = wxNewId()
 ID_TEMPO_TEXT = wxNewId()
+ID_TEMPO_SLIDER = wxNewId()
 ID_RUNSTOP_BUTTON = wxNewId()
 ID_SAVE_PATTERN_BUTTON = wxNewId()
 ID_PLAY_PATTERN_BUTTON = wxNewId()
@@ -115,7 +119,7 @@ class MainWindow(wxFrame):
         #
         wxFrame.__init__(self, NULL, ID_MAIN_WINDOW, title, size = DEFAULT_MAINWINDOW_SIZE,
                          pos = position,
-                         style=wxDEFAULT_FRAME_STYLE|wxNO_FULL_REPAINT_ON_RESIZE|wxMAXIMIZE)
+                         style=(wxDEFAULT_FRAME_STYLE ^ wxRESIZE_BORDER) |wxNO_FULL_REPAINT_ON_RESIZE)
 
         EVT_CLOSE(self, self.OnCloseWindow)
 
@@ -138,6 +142,9 @@ class MainWindow(wxFrame):
 
         # create a clipboard/buffer to hold copied patterns
         self.pattern_clipboard = 0
+
+        # Disable things at the beginning
+        self.x0xb0xDisable()
         
         #
         # Once everything has been set up, show the frame.
@@ -200,7 +207,7 @@ class MainWindow(wxFrame):
                                     choices = bankStrings)
         self.pe_bankText.SetFont(smallfont)
         self.pe_bankText.SetSize((60, self.pe_bankText.GetBestSize()[1] - 3))
-        
+
         self.Bind(wx.EVT_CHOICE, self.HandleChoiceAction, self.pe_bankText)
 
         pe_label1 = wxStaticText(self, -1, "Bank:", (36, 228),
@@ -232,21 +239,21 @@ class MainWindow(wxFrame):
         self.pe_locText.SetSize((60, self.pe_locText.GetBestSize()[1] - 3))
         self.Bind(wx.EVT_CHOICE, self.HandleChoiceAction, self.pe_locText)
 
-
         # Pattern length control
-       
-
-        textValidator = TextValidator(map(str, range(1, NOTES_IN_PATTERN + 1)))        
-        self.lengthText = wxTextCtrl(self, ID_LENGTH_TEXT,
-                                     str(NOTES_IN_PATTERN),
-                                     (self.patternEditGrid.GetPosition()[0]+
-                                      self.patternEditGrid.GetSize()[0] - 40,
-                                      self.pe_bankText.GetPosition()[1]),
-                                     (39,19),
-                                     style = (wxTE_PROCESS_ENTER),
-                                     validator = textValidator)
+        pattlenStrings = []
+        for i in range(0, NOTES_IN_PATTERN + 1):
+            pattlenStrings.append(str(i))
+        self.lengthText = wxChoice(self, ID_LENGTH_TEXT,
+                                   (self.patternEditGrid.GetPosition()[0]+
+                                    self.patternEditGrid.GetSize()[0] - 40,
+                                    self.pe_bankText.GetPosition()[1]),
+                                   (39,19),
+                                   choices = pattlenStrings)
+        self.lengthText.SetFont(smallfont)
+        self.lengthText.SetSize((60, self.lengthText.GetBestSize()[1] - 3))
         self.lengthText.Disable()
-        self.Bind(wx.EVT_TEXT_ENTER, self.HandleTextEnterEvent)
+        
+        self.Bind(wx.EVT_CHOICE, self.HandleChoiceAction, self.lengthText)
 
         pe_label2 = wxStaticText(self, -1, "Pattern Length:",
                                  (450, self.pe_bankText.GetPosition()[1]),
@@ -270,8 +277,7 @@ class MainWindow(wxFrame):
                                       (0, 0))
         self.pe_PlayButton.SetFont(smallfont)
         self.pe_PlayButton.SetSize((100, self.pe_PlayButton.GetBestSize()[1] - 5))
-        
-        #self.pe_PlayButton.Disable()
+        self.pe_PlayButton.Disable()
         self.Bind(wx.EVT_BUTTON, self.HandleButtonAction, self.pe_PlayButton)
 
         # Save button
@@ -343,30 +349,38 @@ class MainWindow(wxFrame):
         tempoText.SetSize(pe_label2.GetBestSize())
 
 #        textValidator = TextValidator(map(str, range(1, NOTES_IN_PATTERN + 1)))        
-        self.tempoText = wxTextCtrl(self, ID_TEMPO_TEXT, '60', (71, 484), (39,19),
+        self.tempoText = wxTextCtrl(self, ID_TEMPO_TEXT, '0', (71, 484), (39,19),
                                      style = (wxTE_PROCESS_ENTER))
-        self.Bind(wx.EVT_TEXT_ENTER, self.HandleTextEnterEvent)
+        #self.Bind(wx.EVT_TEXT_ENTER, self.HandleTextEnterEvent)
 
-
-        syncText = wxStaticText(self, -1, "Select sync mode:", (350, 486), style = wxALIGN_LEFT)
-        syncText.SetFont(labelfont)
-        syncText.SetSize(syncText.GetBestSize())
+        self.tempoSlider = wxSlider(self, id=ID_TEMPO_SLIDER, maxValue=300,
+                                    pos=(self.tempoText.GetPosition()[0] + 30,
+                                         self.tempoText.GetPosition()[1]),
+                                    name="Tempo")
+        self.tempoSlider.SetSize((400,
+                                  self.tempoSlider.GetBestSize()[1]));
+        self.Bind(wx.EVT_SLIDER, self.HandleSlider, self.tempoSlider)
         
-        syncList = [SYNCMSG_OUT, SYNCMSG_IN_MIDI, SYNCMSG_IN_DIN]
-        self.syncChoice = wxChoice(self, ID_SYNC_CHOICE, (454, 484), choices = syncList)
-        self.Bind(wx.EVT_CHOICE, self.HandleChoiceAction, self.syncChoice)
-        self.syncChoice.SetSelection(0)
 
-        try:
-            syncPreference = self.controller.GetConfigValue('syncchoice')
-            for i in range(0,len(syncList)):
-                if syncPreference == syncList[i]:
-                    self.syncChoice.SetSelection(i)
-        except ConfigException, e:
-            # No preference yet exists for sync source.
-            pass
+        #syncText = wxStaticText(self, -1, "Select sync mode:", (350, 486), style = wxALIGN_LEFT)
+        #syncText.SetFont(labelfont)
+        #syncText.SetSize(syncText.GetBestSize())
+        
+        #syncList = [SYNCMSG_OUT, SYNCMSG_IN_MIDI, SYNCMSG_IN_DIN]
+        #self.syncChoice = wxChoice(self, ID_SYNC_CHOICE, (454, 484), choices = syncList)
+        #self.Bind(wx.EVT_CHOICE, self.HandleChoiceAction, self.syncChoice)
+        #self.syncChoice.SetSelection(0)
 
-        self.controller.setSync(self.syncChoice.GetString(self.syncChoice.GetSelection()))
+        #try:
+        #    syncPreference = self.controller.GetConfigValue('syncchoice')
+        #    for i in range(0,len(syncList)):
+        #        if syncPreference == syncList[i]:
+        #            self.syncChoice.SetSelection(i)
+        #except ConfigException, e:
+        #    # No preference yet exists for sync source.
+        #    pass
+
+        #self.controller.setSync(self.syncChoice.GetString(self.syncChoice.GetSelection()))
 
         #
         # Use some sizers to help keep everything in the window nicely proportioned
@@ -384,40 +398,42 @@ class MainWindow(wxFrame):
         menubar = wxMenuBar()
         self.MenuBar = menubar
         
-        menu = wxMenu()
-        menu.Append(ID_FILE_ABOUT, "About", "About This Program")
-        menu.Append(ID_FILE_EXIT, "Quit\tCTRL-Q", "Exit the Program")
-        menubar.Append(menu, "File")
+        self.aboutmenu = wxMenu()
+        self.aboutmenu.Append(ID_FILE_ABOUT, "About", "About This Program")
+        self.aboutmenu.Append(ID_FILE_EXIT, "Quit\tCTRL-Q", "Exit the Program")
+        menubar.Append(self.aboutmenu, "File")
 
-        menu = wxMenu()
-        menu.Append(ID_EDIT_CUT, "Cut Pattern\tCTRL_X", "Cut pattern from EEPROM")
-        menu.Append(ID_EDIT_COPY, "Copy Pattern\tCTRL-C", "Copy pattern from EEPROM")
-        menu.Append(ID_EDIT_PASTE, "Paste Pattern\tCTRL-V", "Paste pattern to EEPROM")
-        menu.AppendSeparator()
-        menu.Append(ID_EDIT_SHIFTR, "Shift Right\tSHIFT-ARROW-RIGHT", "Shift pattern one step to the right")
-        menu.Append(ID_EDIT_SHIFTL, "Shift Left\tSHIFT-ARROW-LEFT", "Shift pattern one step to the left")
-        menubar.Append(menu, "Edit")
+        self.editmenu = wxMenu()
+        self.editmenu.Append(ID_EDIT_CUT, "Cut Pattern\tCTRL_X", "Cut pattern from EEPROM")
+        self.editmenu.Append(ID_EDIT_COPY, "Copy Pattern\tCTRL-C", "Copy pattern from EEPROM")
+        self.editmenu.Append(ID_EDIT_PASTE, "Paste Pattern\tCTRL-V", "Paste pattern to EEPROM")
+        self.editmenu.AppendSeparator()
+        self.editmenu.Append(ID_EDIT_SHIFTR, "Shift Right\tSHIFT-ARROW-RIGHT", "Shift pattern one step to the right")
+        self.editmenu.Append(ID_EDIT_SHIFTL, "Shift Left\tSHIFT-ARROW-LEFT", "Shift pattern one step to the left")
+        menubar.Append(self.editmenu, "Edit")
         
-        menu = wxMenu()
-        menu.Append(ID_X0XB0X_UPLOAD_FIRMWARE, "Upload firmware...\tCTRL-U", "Upload a new .HEX file to the x0xb0x firmware")
-        menu.AppendSeparator()
-        menu.Append(ID_X0XB0X_DUMP_EEPROM, "Backup EEPROM", "Backup EEPROM to the hard disk")
-        menu.Append(ID_X0XB0X_RESTORE_EEPROM, "Restore EEPROM", "Restore EEPROM from a backup on the hard drive")
-        menu.AppendSeparator()
-        menu.Append(ID_X0XB0X_ERASE_EEPROM, "Erase EEPROM", "Erase the patterns on your x0xb0x.")
-        menubar.Append(menu, "x0xb0x")
+        self.x0xmenu = wxMenu()
+        self.x0xmenu.Append(ID_X0XB0X_UPLOAD_FIRMWARE, "Upload firmware...\tCTRL-U", "Upload a new .HEX file to the x0xb0x firmware")
+        self.x0xmenu.AppendSeparator()
+        self.x0xmenu.Append(ID_X0XB0X_DUMP_EEPROM, "Backup EEPROM", "Backup EEPROM to the hard disk")
+        self.x0xmenu.Append(ID_X0XB0X_RESTORE_EEPROM, "Restore EEPROM", "Restore EEPROM from a backup on the hard drive")
+        self.x0xmenu.AppendSeparator()
+        self.x0xmenu.Append(ID_X0XB0X_ERASE_EEPROM, "Erase EEPROM", "Erase the patterns on your x0xb0x.")
+        menubar.Append(self.x0xmenu, "x0xb0x")
 
-        menu = wxMenu()
+        self.serialmenu = wxMenu()
         self.portMenu = wx.Menu()
-        menu.Append(ID_X0XB0X_RECONNECT_SERIAL, "Reconnect serial port\tCTRL-R")
-        menu.Append(ID_X0XB0X_PING, "Send serial ping\tCTRL-P")
-        menu.AppendSeparator()
+        self.serialmenu.Append(ID_X0XB0X_CONNECT, "Connect to x0xb0x")
+        self.serialmenu.Append(ID_X0XB0X_RECONNECT_SERIAL, "Reconnect serial port\tCTRL-R")
+        self.serialmenu.Append(ID_X0XB0X_PING, "Send serial ping\tCTRL-P")
+        self.serialmenu.AppendSeparator()
         #menu.AppendMenu(ID_X0XB0X_REFRESH_SERIAL, "Refresh serial port list")
-        menu.AppendMenu(-1, 'Port', self.portMenu)
-        menubar.Append(menu, 'Serial')
+        self.serialmenu.AppendMenu(ID_PORTMENU, 'Port', self.portMenu)
+        menubar.Append(self.serialmenu, 'Serial')
         
             
         self.SetMenuBar(menubar)
+
 
         #
         # Create event bindings for each of the menu options specified above.
@@ -431,6 +447,7 @@ class MainWindow(wxFrame):
         EVT_MENU(self, ID_EDIT_SHIFTR, self.HandleMenuAction)
         EVT_MENU(self, ID_EDIT_SHIFTL, self.HandleMenuAction)
 
+        EVT_MENU(self, ID_X0XB0X_CONNECT, self.HandleMenuAction)
         EVT_MENU(self, ID_X0XB0X_RECONNECT_SERIAL, self.HandleMenuAction)
         EVT_MENU(self, ID_X0XB0X_REFRESH_SERIAL, self.HandleMenuAction)
         EVT_MENU(self, ID_X0XB0X_PING, self.HandleMenuAction)
@@ -496,7 +513,7 @@ class MainWindow(wxFrame):
             else:
                 # The user has not yet selected a valid bank/loc combination.
                 self.patternEditGrid.SetPatternLength(0)
-                self.lengthTextDisable()
+                self.lengthText.Disable()
                 self.pe_SaveButton.Disable()
                 self.currentBank = 0
                 self.currentLoc = 0
@@ -529,7 +546,34 @@ class MainWindow(wxFrame):
 # UTILITY CLASSES (classes that are used by the main GUI class above)
 #
 
-    #
+# quickies
+
+    def x0xb0xEnable(self):
+        # enable stuff!
+        self.x0xmenu.Enable(ID_X0XB0X_DUMP_EEPROM, True)
+        self.x0xmenu.Enable(ID_X0XB0X_RESTORE_EEPROM, True)
+        self.x0xmenu.Enable(ID_X0XB0X_ERASE_EEPROM, True)
+        self.serialmenu.Enable(ID_X0XB0X_RECONNECT_SERIAL, True)
+        self.serialmenu.Enable(ID_X0XB0X_PING, True)
+        self.serialmenu.Enable(ID_PORTMENU, False)
+        self.x0xmenu.Enable(ID_X0XB0X_UPLOAD_FIRMWARE, False)
+        self.serialmenu.SetLabel(ID_X0XB0X_CONNECT, "Disconnect x0xb0x")
+        self.pe_bankText.Enable();
+        self.pe_locText.Enable();
+        
+    def x0xb0xDisable(self):
+        self.x0xmenu.Enable(ID_X0XB0X_DUMP_EEPROM, False)
+        self.x0xmenu.Enable(ID_X0XB0X_RESTORE_EEPROM, False)
+        self.x0xmenu.Enable(ID_X0XB0X_ERASE_EEPROM, False)
+        self.serialmenu.Enable(ID_X0XB0X_RECONNECT_SERIAL, False)
+        self.serialmenu.Enable(ID_X0XB0X_PING, False)
+        self.serialmenu.Enable(ID_PORTMENU, True)
+        self.x0xmenu.Enable(ID_X0XB0X_UPLOAD_FIRMWARE, True)
+        self.serialmenu.SetLabel(ID_X0XB0X_CONNECT, "Connect to x0xb0x")
+        self.pe_bankText.Disable();
+        self.pe_locText.Disable();
+
+        #
     # ====================== Actions ============================
     #
 
@@ -578,7 +622,12 @@ class MainWindow(wxFrame):
                 # If the pattern has not been saved, simply load the new pattern
                 self.LoadPattern()
                 
-
+        if event.GetId() == ID_LENGTH_TEXT:
+            val = int(self.lengthText.GetSelection())
+            print "New length: " + str(val)
+            self.patternEditGrid.SetPatternLength(val)
+            self.OnGridChange()
+                
         if event.GetId() == ID_SYNC_CHOICE:
             print 'Choice: ' + event.GetString()
             self.controller.setSync(event.GetString())
@@ -589,6 +638,11 @@ class MainWindow(wxFrame):
             self.controller.SetConfigValue('syncchoice', event.GetString())
 
 
+    def HandleSlider(self, event):
+        if (event.GetId() == ID_TEMPO_SLIDER):
+            #print 'slid '+str(self.tempoSlider.GetValue())
+            self.tempoText.SetValue(str(self.tempoSlider.GetValue()))
+            self.controller.setTempo(self.tempoSlider.GetValue())
 
     def HandleMenuAction(self, event):
         if event.GetId() == ID_FILE_ABOUT:
@@ -620,7 +674,19 @@ class MainWindow(wxFrame):
             tmp.shift(1)
             self.patternEditGrid.update(tmp)
             self.pe_SaveButton.Enable()
-                            
+
+        elif event.GetId() == ID_X0XB0X_CONNECT:
+            print "Connecting..."
+            if self.controller.openSerialPort():
+                if self.controller.sendPing():
+                    self.controller.connectSerialPort()
+                    self.statusBar.SetStatusText("Found x0xb0x", 0)
+                    self.controller.readTempo()
+                    self.x0xb0xEnable()
+                else:
+                    self.controller.closeSerialPort()
+                    self.statusBar.SetStatusText("Did not find x0xb0x", 0)
+                    
         elif event.GetId() == ID_X0XB0X_RECONNECT_SERIAL:
             print "Reconnecting"
             self.controller.closeSerialPort()
@@ -635,7 +701,9 @@ class MainWindow(wxFrame):
             d.ShowModal()
             if len(d.GetPath()) != 0:
                 try:
+                    self.controller.openSerialPort()
                     self.controller.uploadHexfile(d.GetPath())
+                    self.controller.closeSerialPort()
                 except Exception, e:
                     errorDialog = wxMessageDialog(self,
                                                   message = 'The following exception occured while programming the flash memory on the x0xb0x:\n\nException: ' + str(e),
@@ -677,21 +745,6 @@ class MainWindow(wxFrame):
             
         elif event.GetId() >= ID_SERIAL_PORT:
             self.controller.selectSerialPort(self.portMenu.GetLabel(event.GetId()))
-
-
-    def HandleTextEnterEvent(self,event):
-
-        if event.GetId() == ID_LENGTH_TEXT:
-            try:
-                val = int(self.lengthText.GetValue())
-                print "New length: " + str(val)
-                self.patternEditGrid.SetPatternLength(val)
-                self.OnGridChange()
-            except ValueError, e:
-                # This exception fires if enter is pressed when the text
-                # box is empty.  In this case, just ignore the keypress.
-                pass
-            
 
 # -------------------------------------------------------
 #

@@ -67,6 +67,9 @@ class Controller:
     def selectSerialPort(self, port):
         return self.model.selectSerialPort(port)
     
+    def connectSerialPort(self):
+        return self.model.connectSerialPort()
+    
     def writePattern(self, pattern, bank, loc):
         return self.model.writePattern(pattern, bank, loc)
 
@@ -95,8 +98,11 @@ class Controller:
         pass
     
     def setTempo(self, tempo):
-        pass
-    
+        return self.model.setTempo(tempo)
+
+    def readTempo(self):
+        return self.model.readTempo()
+
     def setSync(self, sync):
         pass
 
@@ -127,7 +133,7 @@ class Controller:
         pass
     
     def updateTempo(self, tempo):
-        pass
+        return self.view.updateTempo(tempo)
     
     def updateSync(self, sync):
         pass

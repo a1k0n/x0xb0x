@@ -65,3 +65,7 @@ class View:
         dlg = wx.MessageDialog(self.mainWindow, string, 'x0xb0x c0ntr0l', wx.OK | wx.ICON_INFORMATION) 
         dlg.ShowModal() 
         dlg.Destroy()
+
+    def updateTempo(self, tempo):
+        self.mainWindow.tempoText.SetValue(str(tempo))
+        self.mainWindow.tempoSlider.SetValue(tempo)

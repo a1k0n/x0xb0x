@@ -31,8 +31,10 @@ TOGGLE_SEQUENCER_MSG = '\x09'
 GET_SEQUENCER_STATE_MSG = '\x0B'
 SET_SYNC_MSG = '\x0C'
 GET_SYNC_MSG = '\x0D'
-SET_TEMPO_MSG = '\x0E'
-CTRL_GET_TEMPO_MSG = '\x0F'
+
+GET_TEMPO_MSG = '\x40'
+SET_TEMPO_MSG = '\x41'
+TEMPO_MSG = '\x42'
 
 #
 # Messages from the x0xb0x to the c0ntr0l software.
@@ -61,9 +63,9 @@ class DataLink:
             print 'Exception occured in sendBasicPacket(): ' + str(e)
             raise CommException('Error occured in sendBasicPacket()')
 
-    def getBasicPacket(self) :
+    def getBasicPacket(self, timeout = DEFAULT_TIMEOUT) :
         try:
-            self.s.setTimeout(DEFAULT_TIMEOUT)
+            self.s.setTimeout(timeout)
 
             packet = Packet([])
             character = self.s.read()
@@ -77,17 +79,33 @@ class DataLink:
             print 'Exception occured in getBasicPacket(): ' + str(e)
             raise CommException('Error occured in getBasicPacket()')
 
+    def packetWaiting(self):
+        try:
+            return self.s.inWaiting()
+        except Exception, e:
+            raise CommException('Error occured in packetWaiting()')
+
+    def getPushedPacket(self):
+        # this is a packet that the x0x pushed without warning (tempo usually)
+        packet = self.getBasicPacket()
+        if packet.isCorrect:
+            return packet
+        return None
+        
 #----------------- Specific Packet Types ---------------------------------
     def sendPingMessage(self):
         self.s.flushInput()
         self.sendBasicPacket(PING_MSG)
 
-        packet = self.getBasicPacket()
+        packet = self.getBasicPacket(0)
         if packet.isCorrect:
             packet.printMe()
+            print "PACKET OK!";
+            return True
         else:
             packet.printMe()
             print 'Bad packet!'
+            return False
 
     def sendPlayPatternMessage(self, pattern):
         #
@@ -197,15 +215,35 @@ class DataLink:
         packet = self.getBasicPacket()
         print packet
 
-    def sendSetTempoPacket(self, tempo) :
-        self.sendBasicPacket(SET_TEMPO, content = [dec2hex(tempo)])
-        packet = self.getBasicPacket()
-        print packet
-
     def sendGetTempoPacket(self) :
-        self.sendBasicPacket(GET_TEMPO)
+        print "get tempo\n"
+        self.s.flushInput()
+
+        self.sendBasicPacket(GET_TEMPO_MSG)
+
         packet = self.getBasicPacket()
-        print packet
+        if packet.isCorrect:
+            packet.printMe()
+            print "PACKET OK!";
+            return (ord(a2b_hex(packet.contentList[0]))<< 8) + ord(a2b_hex(packet.contentList[1]))
+        else:
+            packet.printMe()
+            print 'Bad packet!'
+            return 0
+
+    def sendSetTempoPacket(self, tempo) :
+        self.s.flushInput()
+
+        self.sendBasicPacket(SET_TEMPO_MSG, content = chr(tempo >> 8)+
+                                                       chr(tempo & 0xFF))
+        packet = self.getBasicPacket()
+        if packet.isCorrect:
+            #packet.printMe()
+            print "PACKET OK!";
+        else:
+            packet.printMe()
+            print 'Bad packet!'
+        
 
 
         

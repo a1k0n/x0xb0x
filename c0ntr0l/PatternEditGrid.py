@@ -277,7 +277,7 @@ class PatternEditGrid(gridlib.Grid):
         # (the main GUI window) to set the length text in the text
         # box to the correct length.
         #
-        self.parent.lengthText.SetValue(str(newLength))
+        self.parent.lengthText.Select(newLength)
 
 
     def enableColumn(self, col):
