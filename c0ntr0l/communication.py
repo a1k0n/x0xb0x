@@ -216,7 +216,6 @@ class DataLink:
         print packet
 
     def sendGetTempoPacket(self) :
-        print "get tempo\n"
         self.s.flushInput()
 
         self.sendBasicPacket(GET_TEMPO_MSG)

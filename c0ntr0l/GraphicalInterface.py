@@ -46,7 +46,7 @@ from PatternEditGrid import PatternEditGrid
 from PatternPlayGrid import PatternPlayGrid
 
 
-DEFAULT_MAINWINDOW_SIZE = (600, 600)
+DEFAULT_MAINWINDOW_SIZE = (600, 450)
 DEFAULT_MAINWINDOW_POS = (150, 150)     # Default position
 
 LABEL_TO_OBJ_PAD = 5
@@ -70,6 +70,7 @@ ID_X0XB0X_DUMP_EEPROM = wxNewId()
 ID_X0XB0X_RESTORE_EEPROM = wxNewId()
 ID_X0XB0X_ERASE_EEPROM = wxNewId()
 ID_X0XB0X_CONNECT = wxNewId()
+ID_X0XB0X_DISCONNECT = wxNewId()
 ID_X0XB0X_RECONNECT_SERIAL = wxNewId()
 ID_X0XB0X_REFRESH_SERIAL = wxNewId()
 ID_X0XB0X_PING = wxNewId()
@@ -170,9 +171,7 @@ class MainWindow(wxFrame):
 
         biglabelfont = wxFont(14, wxTELETYPE, wxNORMAL, wxNORMAL, faceName = "Courier")
 
-        divider3 = wxStaticLine(self, -1, pos = (15,442), size = (569,1), style = wxLI_HORIZONTAL)
-        label3 = wxStaticText(self, -1, "Global Parameters", (20, 450))
-        label3.SetFont(biglabelfont)
+        
 
         #
         # ==== Pattern Edit Section ====
@@ -250,7 +249,7 @@ class MainWindow(wxFrame):
                                    (39,19),
                                    choices = pattlenStrings)
         self.lengthText.SetFont(smallfont)
-        self.lengthText.SetSize((60, self.lengthText.GetBestSize()[1] - 3))
+        self.lengthText.SetSize(self.lengthText.GetBestSize())
         self.lengthText.Disable()
         
         self.Bind(wx.EVT_CHOICE, self.HandleChoiceAction, self.lengthText)
@@ -299,62 +298,72 @@ class MainWindow(wxFrame):
         #
         # ==== Pattern Play Section ====
         #
-        divider2 = wxStaticLine(self, -1,
-                                pos = (15, self.pe_SaveButton.GetPosition()[1] +
-                                       self.pe_SaveButton.GetSize()[1] + 15),
-                                size = (569,1), style = wxLI_HORIZONTAL)
-        label2 = wxStaticText(self, -1, "Pattern Play",
-                              (divider2.GetPosition()[0]+5,
-                               divider2.GetPosition()[1]+5))
-        label2.SetFont(biglabelfont)
+        #divider2 = wxStaticLine(self, -1,
+        #                        pos = (15, self.pe_SaveButton.GetPosition()[1] +
+        #                               self.pe_SaveButton.GetSize()[1] + 15),
+        #                        size = (569,1), style = wxLI_HORIZONTAL)
+        #label2 = wxStaticText(self, -1, "Pattern Play",
+        #                      (divider2.GetPosition()[0]+5,
+        #                       divider2.GetPosition()[1]+5))
+        #label2.SetFont(biglabelfont)
 
-        self.patternPlayGrid = PatternPlayGrid(self)
+        #self.patternPlayGrid = PatternPlayGrid(self)
 
         # Man, couldnt you put this in the widget -- ada
-        for i in range(1,9):
-            wxStaticText(self, -1, str(i), (96 + (i-1)*515/8, 318))
-        wxStaticText(self, -1, "Pattern:", (17, 362))
+        #for i in range(1,9):
+        #    wxStaticText(self, -1, str(i), (96 + (i-1)*515/8, 318))
+        #wxStaticText(self, -1, "Pattern:", (17, 362))
         
 
         #
         # Other controls and buttons in the Pattern Play section
         #
-        pp_button1 = wxButton(self, ID_RUNSTOP_BUTTON, "R/S");
-        pp_button1.SetFont(smallfont)
-        pp_button1.SetPosition((self.patternPlayGrid.GetPosition()[0] + 3,
-                                self.patternPlayGrid.GetPosition()[1] +
-                                self.patternPlayGrid.GetSize()[1] + 5))
-        pp_button1.SetSize((pp_button1.GetBestSize()[0],
-                            pp_button1.GetBestSize()[1]- 5))
-        pp_button2 = wxButton(self, ID_PP_LOAD_BANK_BUTTON, "Load", (518, 413), (66, 17))
-        self.Bind(wx.EVT_BUTTON, self.HandleButtonAction, pp_button1)
-        self.Bind(wx.EVT_BUTTON, self.HandleButtonAction, pp_button2)
+        #pp_button1 = wxButton(self, ID_RUNSTOP_BUTTON, "R/S");
+        #pp_button1.SetFont(smallfont)
+        #pp_button1.SetPosition((self.patternPlayGrid.GetPosition()[0] + 3,
+        #                        self.patternPlayGrid.GetPosition()[1] +
+        #                        self.patternPlayGrid.GetSize()[1] + 5))
+        #pp_button1.SetSize((pp_button1.GetBestSize()[0],
+        #                    pp_button1.GetBestSize()[1]- 5))
+        #pp_button2 = wxButton(self, ID_PP_LOAD_BANK_BUTTON, "Load", (518, 413), (66, 17))
+        #self.Bind(wx.EVT_BUTTON, self.HandleButtonAction, pp_button1)
+        #self.Bind(wx.EVT_BUTTON, self.HandleButtonAction, pp_button2)
         
-        pp_label1 = wxStaticText(self, -1, "Bank:", (436, 415), style = wxALIGN_RIGHT)
-        pp_label1.SetFont(labelfont)
-        pp_label1.SetSize(pp_label1.GetBestSize())
+        #pp_label1 = wxStaticText(self, -1, "Bank:", (436, 415), style = wxALIGN_RIGHT)
+        #pp_label1.SetFont(labelfont)
+        #pp_label1.SetSize(pp_label1.GetBestSize())
 
-        textValidator = TextValidator(map(str, range(1, NUMBER_OF_BANKS + 1))) 
-        self.pp_bankSelect = wxTextCtrl(self, -1, "1", (476,412), (39,19),
-                                        style = (wxTE_PROCESS_ENTER),
-                                        validator = textValidator)
+        #textValidator = TextValidator(map(str, range(1, NUMBER_OF_BANKS + 1))) 
+        #self.pp_bankSelect = wxTextCtrl(self, -1, "1", (476,412), (39,19),
+        #                                style = (wxTE_PROCESS_ENTER),
+        #                                validator = textValidator)
 
-
+        divider3 = wxStaticLine(self, -1, pos = (15,self.pe_SaveButton.GetPosition()[1]+50), size = (569,1),
+                                style = wxLI_HORIZONTAL)
+        label3 = wxStaticText(self, -1, "Global Parameters",
+                              (divider3.GetPosition()[0]+5, divider3.GetPosition()[1]+10))
+        label3.SetFont(biglabelfont)
+        
         # 
         # The tempo and sync source controls appear in the very bottom of the
         # window.
         #
-        tempoText = wxStaticText(self, -1, "Tempo:", (27, 486), style = wxALIGN_LEFT)
-        tempoText.SetFont(labelfont)
-        tempoText.SetSize(pe_label2.GetBestSize())
+        tempoLabel = wxStaticText(self, -1, "Tempo:",
+                                 (label3.GetPosition()[0]+10,
+                                  label3.GetPosition()[1]+label3.GetSize()[1]+15),
+                                 style = wxALIGN_LEFT)
+        tempoLabel.SetFont(labelfont)
+        tempoLabel.SetSize(tempoLabel.GetBestSize())
 
 #        textValidator = TextValidator(map(str, range(1, NOTES_IN_PATTERN + 1)))        
-        self.tempoText = wxTextCtrl(self, ID_TEMPO_TEXT, '0', (71, 484), (39,19),
+        self.tempoText = wxTextCtrl(self, ID_TEMPO_TEXT, '0',
+                                    (tempoLabel.GetPosition()[0]+tempoLabel.GetSize()[0]+5,
+                                     tempoLabel.GetPosition()[1]), (39,19),
                                      style = (wxTE_PROCESS_ENTER))
         #self.Bind(wx.EVT_TEXT_ENTER, self.HandleTextEnterEvent)
 
-        self.tempoSlider = wxSlider(self, id=ID_TEMPO_SLIDER, maxValue=300,
-                                    pos=(self.tempoText.GetPosition()[0] + 30,
+        self.tempoSlider = wxSlider(self, id=ID_TEMPO_SLIDER, minValue = 20, maxValue=300,
+                                    pos=(self.tempoText.GetPosition()[0] + 50,
                                          self.tempoText.GetPosition()[1]),
                                     name="Tempo")
         self.tempoSlider.SetSize((400,
@@ -404,7 +413,7 @@ class MainWindow(wxFrame):
         menubar.Append(self.aboutmenu, "File")
 
         self.editmenu = wxMenu()
-        self.editmenu.Append(ID_EDIT_CUT, "Cut Pattern\tCTRL_X", "Cut pattern from EEPROM")
+        #self.editmenu.Append(ID_EDIT_CUT, "Cut Pattern\tCTRL_X", "Cut pattern from EEPROM")
         self.editmenu.Append(ID_EDIT_COPY, "Copy Pattern\tCTRL-C", "Copy pattern from EEPROM")
         self.editmenu.Append(ID_EDIT_PASTE, "Paste Pattern\tCTRL-V", "Paste pattern to EEPROM")
         self.editmenu.AppendSeparator()
@@ -423,7 +432,6 @@ class MainWindow(wxFrame):
 
         self.serialmenu = wxMenu()
         self.portMenu = wx.Menu()
-        self.serialmenu.Append(ID_X0XB0X_CONNECT, "Connect to x0xb0x")
         self.serialmenu.Append(ID_X0XB0X_RECONNECT_SERIAL, "Reconnect serial port\tCTRL-R")
         self.serialmenu.Append(ID_X0XB0X_PING, "Send serial ping\tCTRL-P")
         self.serialmenu.AppendSeparator()
@@ -441,13 +449,14 @@ class MainWindow(wxFrame):
         EVT_MENU(self, ID_FILE_ABOUT, self.HandleMenuAction)
         EVT_MENU(self, ID_FILE_EXIT, self.HandleMenuAction)
 
-        EVT_MENU(self, ID_EDIT_CUT, self.HandleMenuAction)
+        #EVT_MENU(self, ID_EDIT_CUT, self.HandleMenuAction)
         EVT_MENU(self, ID_EDIT_COPY, self.HandleMenuAction)
         EVT_MENU(self, ID_EDIT_PASTE, self.HandleMenuAction)
         EVT_MENU(self, ID_EDIT_SHIFTR, self.HandleMenuAction)
         EVT_MENU(self, ID_EDIT_SHIFTL, self.HandleMenuAction)
 
         EVT_MENU(self, ID_X0XB0X_CONNECT, self.HandleMenuAction)
+        EVT_MENU(self, ID_X0XB0X_DISCONNECT, self.HandleMenuAction)
         EVT_MENU(self, ID_X0XB0X_RECONNECT_SERIAL, self.HandleMenuAction)
         EVT_MENU(self, ID_X0XB0X_REFRESH_SERIAL, self.HandleMenuAction)
         EVT_MENU(self, ID_X0XB0X_PING, self.HandleMenuAction)
@@ -480,8 +489,8 @@ class MainWindow(wxFrame):
     # The about box dialo.g
     #
     def AboutBox(self):
-        aboutString = ('(c) 2005 Michael Broxton.\n\n' +
-                       'Kudos to ladyada and the german for creating a bitchin\' synth!\n')
+        aboutString = ('(c) 2005 Michael Broxton & Limor Fried.\n\n' +
+                       'For more information about the x0xb0x, check out http://www.ladyada.net/make/x0xb0x\n')
         dlg = wxMessageDialog(self, aboutString, 'x0xb0x c0ntr0l', wxOK | wxICON_INFORMATION) 
         dlg.ShowModal() 
         dlg.Destroy()
@@ -557,9 +566,16 @@ class MainWindow(wxFrame):
         self.serialmenu.Enable(ID_X0XB0X_PING, True)
         self.serialmenu.Enable(ID_PORTMENU, False)
         self.x0xmenu.Enable(ID_X0XB0X_UPLOAD_FIRMWARE, False)
-        self.serialmenu.SetLabel(ID_X0XB0X_CONNECT, "Disconnect x0xb0x")
+        if (self.serialmenu.FindItemById(ID_X0XB0X_CONNECT) != None):
+            self.serialmenu.Remove(ID_X0XB0X_CONNECT)
+        self.serialmenu.Insert(0, ID_X0XB0X_DISCONNECT, "Disconnect x0xb0x")
         self.pe_bankText.Enable();
         self.pe_locText.Enable();
+        self.editmenu.Enable(ID_EDIT_COPY, True)
+        self.editmenu.Enable(ID_EDIT_PASTE, True)
+        self.editmenu.Enable(ID_EDIT_SHIFTR, True)
+        self.editmenu.Enable(ID_EDIT_SHIFTL, True)
+        self.tempoSlider.Enable()
         
     def x0xb0xDisable(self):
         self.x0xmenu.Enable(ID_X0XB0X_DUMP_EEPROM, False)
@@ -569,11 +585,17 @@ class MainWindow(wxFrame):
         self.serialmenu.Enable(ID_X0XB0X_PING, False)
         self.serialmenu.Enable(ID_PORTMENU, True)
         self.x0xmenu.Enable(ID_X0XB0X_UPLOAD_FIRMWARE, True)
-        self.serialmenu.SetLabel(ID_X0XB0X_CONNECT, "Connect to x0xb0x")
+        if (self.serialmenu.FindItemById(ID_X0XB0X_DISCONNECT) != None):
+            self.serialmenu.Remove(ID_X0XB0X_DISCONNECT)
+        self.serialmenu.Insert(0, ID_X0XB0X_CONNECT, "Connect to x0xb0x")
         self.pe_bankText.Disable();
         self.pe_locText.Disable();
-
-        #
+        self.editmenu.Enable(ID_EDIT_COPY, False)
+        self.editmenu.Enable(ID_EDIT_PASTE, False)
+        self.editmenu.Enable(ID_EDIT_SHIFTR, False)
+        self.editmenu.Enable(ID_EDIT_SHIFTL, False)
+        self.tempoSlider.Disable()
+    #
     # ====================== Actions ============================
     #
 
@@ -686,7 +708,14 @@ class MainWindow(wxFrame):
                 else:
                     self.controller.closeSerialPort()
                     self.statusBar.SetStatusText("Did not find x0xb0x", 0)
-                    
+
+
+        elif event.GetId() == ID_X0XB0X_DISCONNECT:
+            print "Disconnecting..."
+            self.controller.closeSerialPort()
+            self.statusBar.SetStatusText("Disconnected", 0)
+            self.x0xb0xDisable()
+            
         elif event.GetId() == ID_X0XB0X_RECONNECT_SERIAL:
             print "Reconnecting"
             self.controller.closeSerialPort()

@@ -129,6 +129,10 @@ class Model:
 
     def closeSerialPort(self):
         if self.serialconnection:
+            if self.worker:
+                self.worker.abort()
+                self.worker = None
+            time.sleep(1);
             self.serialconnection.close()
             #
             # A slight special case.  If the program is closing, the GUI is already
@@ -143,6 +147,7 @@ class Model:
         if self.serialconnection:
             if self.worker:
                 self.worker.abort()
+                self.worker = None
             self.worker = WorkerThread(self)
                                        
     def selectSerialPort(self, name):
@@ -309,7 +314,6 @@ class Model:
     def readTempo(self):
         self.commlock = True;
         try:
-            print "TEMP"
             tempo = self.dataLink.sendGetTempoPacket()
             self.commlock = False
             self.controller.updateTempo(tempo)
@@ -377,7 +381,7 @@ class WorkerThread(Thread):
                     #print '!'+str(v)
                     self._model.processPushedPacket()
             else:
-                time.sleep(.1)
+                time.sleep(.3)
                 
             if self._want_abort:
                 #wxPostEvent(self._notify_window,ResultEvent(None))
