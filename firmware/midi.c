@@ -170,6 +170,8 @@ void do_midi_mode(void) {
 	  // not for us, continue!
 	  continue;
 	}
+      } else {
+	continue; // No MIDI data waiting (--Chairman Meow)
       }
 
       switch (midi_running_status) {
