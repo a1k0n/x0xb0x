@@ -139,14 +139,9 @@ void do_midi_mode(void) {
     }
 
     if (has_bank_knob_changed()) {
-      // bank knob was changed, check if it was going up or down
-      if (last_bank == (bank+1)%16) {
-	if (midi_in_addr != 0)
-	  midi_in_addr--;
-      } else {
-	if (midi_in_addr != 15)
-	  midi_in_addr++;
-      }
+      // bank knob was changed, change the midi address
+      midi_in_addr = bank;
+
       // set the new midi address (burn to EEPROM)
       internal_eeprom_write8(MIDIIN_ADDR_EEADDR, midi_in_addr);
 
@@ -217,8 +212,9 @@ void do_midi_mode(void) {
 	  break;
 	}
       default:
-	putstring("Received Unknown MIDI: 0x"); putnum_uh(c); 
-	putstring("\n\r");
+	/*putstring("Received Unknown MIDI: 0x"); putnum_uh(c); 
+	  putstring("\n\r"); */
+	break;
       }
     }
   }
@@ -261,9 +257,9 @@ void midi_note_on(uint8_t note, uint8_t velocity) {
       slide = 1;
 
     if (velocity > ACCENT_THRESH) {
-      note_on(note - 0x1A, slide, 1); // with accent
+      note_on(note - 0x19, slide, 1); // with accent
     } else {
-      note_on(note - 0x1A, slide, 0); // no accent
+      note_on(note - 0x19, slide, 0); // no accent
     }
 
     prev_note = note;

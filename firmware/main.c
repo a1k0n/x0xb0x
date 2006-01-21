@@ -107,7 +107,8 @@ void do_tempo(void) {
   cli();
 
   // if the sync is internal or whatever, we have to generate dinsync/midisync msgs
-  if ((sync != MIDI_SYNC) && (sync != DIN_SYNC)) {
+  if ((sync != MIDI_SYNC) && (sync != DIN_SYNC) &&  
+      (function != KEYBOARD_MODE_FUNC)) {
     if (dinsync_counter >= DINSYNC_PPQ/4)
       dinsync_counter = 0;
 

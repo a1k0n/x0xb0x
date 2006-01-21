@@ -63,6 +63,7 @@ uint8_t is_numkey_led_set(uint8_t num);
 
 void set_notekey_led(uint8_t note);
 void set_notekey_led_blink(uint8_t num);
+void clear_notekey_led(uint8_t num);
 void clear_notekey_leds(void);
 uint8_t is_notekey_led_blink(uint8_t num);
 

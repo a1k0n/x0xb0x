@@ -281,6 +281,11 @@ void set_notekey_led(uint8_t num) {
     set_led(notekey_led_tab[num]);
 }
 
+void clear_notekey_led(uint8_t num) {
+  if (num <= 12)
+    clear_led(notekey_led_tab[num]);
+}
+
 void set_notekey_led_blink(uint8_t num) {
   if (num <= 12)
     set_led_blink(notekey_led_tab[num]);

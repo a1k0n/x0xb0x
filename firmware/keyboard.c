@@ -88,14 +88,10 @@ void do_keyboard_mode(void) {
     }
 
     if (has_bank_knob_changed()) {
-      // bank knob was changed, check if it was going up or down
-      if (last_bank == (bank+1)%16) {
-	if (midi_out_addr != 0)
-	  midi_out_addr--;
-      } else {
-	if (midi_out_addr != 15)
-	  midi_out_addr++;
-      }
+      // bank knob was changed, which means they want a different
+      // midi addr... OK then!
+      midi_out_addr = bank;
+
       // set the new midi address (burn to EEPROM)
       internal_eeprom_write8(MIDIOUT_ADDR_EEADDR, midi_out_addr);
 
@@ -111,11 +107,17 @@ void do_keyboard_mode(void) {
 	note_on((C2+i) + shift*OCTAVE, slide, accent);
 	midi_send_note_on( ((C2+i) + shift*OCTAVE) | (accent << 6));
 	slide = TRUE;
+
+	// turn on that LED
+	set_notekey_led(i);	
       }
       
       // check if any notes were released
       if (just_released(notekey_tab[i])) {
 	midi_send_note_off( ((C2+i) + shift*OCTAVE) | (accent << 6));
+
+	// turn off that LED
+	clear_notekey_led(i);
       }
     }
 
@@ -141,6 +143,7 @@ void do_keyboard_mode(void) {
     if ((NOTE_PIN & 0x3F) && no_keys_pressed()) {
       note_off(0);
       slide = FALSE;
+      clear_notekey_leds();
     }
   }
 }
