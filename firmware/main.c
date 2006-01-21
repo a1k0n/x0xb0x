@@ -585,6 +585,10 @@ int main(void) {
       break;
     }
     case A_FUNC:
+      // edit the pattern with the midi sync axxxion
+      sync = MIDI_SYNC;
+      do_pattern_edit();
+      break;
     case B_FUNC:
     case C_FUNC:
       clear_all_leds();

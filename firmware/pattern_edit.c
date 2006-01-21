@@ -55,6 +55,7 @@ uint8_t patt_location, patt_bank;
 volatile uint8_t pattern_buff[PATT_SIZE];    // the 'loaded' pattern buffer
 
 uint8_t in_runwrite_mode, in_stepwrite_mode;
+uint8_t dirtyflag = 0; // you filthy pattern, have you been modified?
 
 extern uint8_t curr_note, sync;
 
@@ -69,7 +70,17 @@ void do_pattern_edit(void) {
   play_loaded_pattern = 0;
   curr_pattern_index = 0;
   curr_note = 0;
-  sync = INTERNAL_SYNC;
+
+  if (sync == INTERNAL_SYNC)
+    turn_on_tempo();
+  else {
+    turn_off_tempo();
+    if (sync == DIN_SYNC) {
+      dinsync_set_in();
+    } else {
+      dinsync_set_out();
+    }
+  }
 
   read_switches();
   patt_bank = bank;
@@ -79,8 +90,6 @@ void do_pattern_edit(void) {
 
   set_bank_led(bank);
       
-  turn_on_tempo();
-
   while (1) {
     read_switches();
 
@@ -133,6 +142,7 @@ void do_pattern_edit(void) {
       for (i=0; i< PATT_SIZE; i++) {
 	pattern_buff[i] = random();
       }
+      dirtyflag = 1; // clearly, changed
     } else if (just_released(KEY_CHAIN) && in_runwrite_mode) {
       clear_led(LED_CHAIN);
     }
@@ -165,10 +175,12 @@ void do_pattern_edit(void) {
       if (just_pressed(KEY_ACCENT) && (curr_note != 0x3F)) {
 	//putstring("accent ");
 	pattern_buff[index] ^= 1 << 6;
+	dirtyflag = 1; // clearly, changed
       }
       if (just_pressed(KEY_SLIDE) && (curr_note != 0x3F)) {
 	//putstring("slide ");
       	pattern_buff[index] ^= 1 << 7;
+	dirtyflag = 1; // clearly, changed
       }
 
       // rests/dones are middle octave (if you hit a note key next)
@@ -244,6 +256,7 @@ void do_pattern_edit(void) {
 	}
 	// if the note changed!
 	pattern_buff[index] = curr_note;
+	dirtyflag = 1; // clearly, changed
 
 	if (in_stepwrite_mode) 	 // restrike note
 	  note_on(curr_note & 0x3F,
@@ -253,9 +266,13 @@ void do_pattern_edit(void) {
       }
       if (curr_note != 0xFF) {
 	set_note_led(curr_note);
-	clear_led(LED_DONE);
+	if (dirtyflag)
+	  set_led_blink(LED_DONE);
+	else
+	  clear_led(LED_DONE);
       } else {
 	clear_note_leds();
+	clear_led_blink(LED_DONE);
 	set_led(LED_DONE);
       }
     }
@@ -337,6 +354,8 @@ void do_pattern_edit(void) {
 	stop_stepwrite_mode();
       }
       write_pattern(bank, patt_location);
+      dirtyflag = 0; // not dirty anymore, saved!
+      clear_led_blink(LED_DONE);
     }
 
 
@@ -365,6 +384,8 @@ void load_pattern(uint8_t bank, uint8_t patt_location) {
   }
   //putstring("\n\r");
 
+  dirtyflag = 0;
+  clear_led_blink(LED_DONE);
   clock_leds();
 
 }
@@ -413,14 +434,14 @@ void start_runwrite_mode() {
   in_runwrite_mode = 1;
   set_led(LED_RS); 
   note_off(0);
-  turn_on_tempo();
+  //turn_on_tempo();
   while (note_counter & 0x1);  // wait for the tempo interrupt to be ready for a note-on
   play_loaded_pattern = 1;
 }
 
 void stop_runwrite_mode() {
   //putstring("stop runwrite\n\r");
-  turn_off_tempo();
+  //turn_off_tempo();
   play_loaded_pattern = 0;
   clear_key_leds();
   clear_bank_leds();
@@ -430,16 +451,13 @@ void stop_runwrite_mode() {
   note_off(0);
 }
 
-
-
-
 void start_stepwrite_mode() {
   //putstring("start stepwrite\n\r");
   in_stepwrite_mode = 1;
   set_led(LED_NEXT); 
   clear_bank_leds();
   set_bank_led(0);
-  turn_off_tempo();
+  //turn_off_tempo();
   note_off(0);
 }
 
@@ -447,9 +465,14 @@ void stop_stepwrite_mode() {
   //putstring("stop stepwrite\n\r");
   in_stepwrite_mode = 0;
   clear_led(LED_NEXT); 
+  dirtyflag = 0;
+  clear_led(LED_DONE);
+  clear_led_blink(LED_DONE);
   clear_key_leds();
   clear_bank_leds();
   set_bank_led(bank);
-  turn_on_tempo();
+  /*  if (sync == INTERNAL_SYNC)
+    turn_on_tempo();
+  */
   note_off(0);
 }
