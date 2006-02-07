@@ -40,6 +40,7 @@ void clock_leds(void);
 void clear_led(uint8_t ledno);
 void set_led(uint8_t ledno);
 void set_led_blink(uint8_t ledno);
+void clear_led_blink(uint8_t ledno);
 
 int is_led_set(uint8_t ledno);
 uint8_t is_led_blink(uint8_t num);
@@ -48,6 +49,7 @@ void set_bank_led(uint8_t num);
 void set_bank_led_blink(uint8_t num);
 void clear_bank_leds(void);
 uint8_t is_bank_led_blink(uint8_t num);
+uint8_t is_bank_led_set(uint8_t num);
 
 void set_key_led(uint8_t num);
 void set_key_led_blink(uint8_t num);

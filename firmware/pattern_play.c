@@ -93,7 +93,7 @@ volatile uint16_t tap_tempo_timer = 0;
 void do_patterntrack_play(void) {
   uint8_t i = 0, curr_function;
   uint8_t midi_cmd = 0;
-  uint8_t midi_data = 0;
+  //uint8_t midi_data ;
 
   curr_function = function;
 
@@ -330,8 +330,7 @@ void do_patterntrack_play(void) {
       }
       display_curr_pitch_shift_ud();
     }
-
-    
+ 
     if (playing)
       {
 	// midi sync clock ticks
@@ -347,9 +346,6 @@ void do_patterntrack_play(void) {
 	  continue;
 	}
       }
-    
-
-
 
     // if syncing by MIDI, look for midi commands
     if (sync == MIDI_SYNC) {

@@ -46,6 +46,10 @@
 // these are set by read_switches()
 extern uint8_t function, bank;
 
+// the midi clock counter
+extern volatile int16_t midisync_clocked;
+extern volatile uint8_t playing;
+
 // The tempo note counter. used to start runwrite on a note-on interrupt call
 volatile uint8_t note_counter;
 
@@ -61,7 +65,9 @@ extern uint8_t curr_note, sync;
 
 /***********************/
 void do_pattern_edit(void) {
-  uint8_t i;
+  uint8_t i, curr_function, midi_cmd;
+
+  curr_function = function;
 
   // initialize
   patt_location = 0;
@@ -70,16 +76,12 @@ void do_pattern_edit(void) {
   play_loaded_pattern = 0;
   curr_pattern_index = 0;
   curr_note = 0;
-
+  
   if (sync == INTERNAL_SYNC)
     turn_on_tempo();
   else {
     turn_off_tempo();
-    if (sync == DIN_SYNC) {
-      dinsync_set_in();
-    } else {
-      dinsync_set_out();
-    }
+    dinsync_set_out();
   }
 
   read_switches();
@@ -93,11 +95,11 @@ void do_pattern_edit(void) {
   while (1) {
     read_switches();
 
-    if (function != EDIT_PATTERN_FUNC) {
+    if (function != curr_function) {
       // oops i guess they want something else, return!
       turn_off_tempo();
       play_loaded_pattern = FALSE;
-
+      
       // turn off all sound & output signals
       note_off(0);
       dinsync_stop();
@@ -147,20 +149,34 @@ void do_pattern_edit(void) {
       clear_led(LED_CHAIN);
     }
 
-    
-    // if they hit run/stop, play the pattern in scratch! 
-    // (until they hit rs again)
-    if (just_pressed(KEY_RS)) {
-      if (in_runwrite_mode) {
-	stop_runwrite_mode();
-      } else if (in_stepwrite_mode) {
+    // midi sync clock ticks
+    if (playing && (sync == MIDI_SYNC) && (midisync_clocked > 0)) {
+      midisync_clocked -= MIDISYNC_PPQ/8;
+      do_tempo();
+      continue;
+    }
+
+    // if syncing by MIDI, look for midi commands
+    if (sync == MIDI_SYNC) {
+      midi_cmd = midi_recv_cmd(); // returns 0 if no midi commands waiting
+    }
+
+    if ((sync == MIDI_SYNC) && (midi_cmd != 0)) {
+      putnum_uh(midi_cmd);
+    }
+
+    // if they hit run/stop, or on midi stop/start,
+    // play the pattern in scratch! (until they hit rs again)
+    if (in_runwrite_mode && 
+	(((sync == INTERNAL_SYNC) && just_pressed(KEY_RS)) ||
+	 ((sync == MIDI_SYNC) && (midi_cmd == MIDI_STOP)))) {
+      stop_runwrite_mode();
+    } else if (((sync == INTERNAL_SYNC) && just_pressed(KEY_RS)) ||
+	       ((sync == MIDI_SYNC) && 
+		((midi_cmd == MIDI_START) || (midi_cmd == MIDI_CONTINUE)) ) ) {
+      if (in_stepwrite_mode)
 	stop_stepwrite_mode();
-	start_runwrite_mode();
-      }  else {
-	//putstring("start\n\r");
-	start_runwrite_mode();	   // tell the tempo interrupt to do its thing
-	// call_tempo_now();
-      }
+      start_runwrite_mode();
     }
 
     if (in_runwrite_mode || in_stepwrite_mode) {
@@ -204,7 +220,7 @@ void do_pattern_edit(void) {
       // cant change octaves on rest/done
       if (just_pressed(KEY_UP) &&       
 	  (curr_note != 0x3F) && (curr_note != 0))
-	if (shift < 1)
+	if (shift < 2)
 	  curr_note += OCTAVE;
 
       // cant change octaves on rest/done, but default to mid octave
@@ -262,8 +278,8 @@ void do_pattern_edit(void) {
 	  note_on(curr_note & 0x3F,
 		  curr_note >> 7,              // slide
 		  (curr_note>>6) & 0x1);       // accent
-	
       }
+
       if (curr_note != 0xFF) {
 	set_note_led(curr_note);
 	if (dirtyflag)
@@ -273,6 +289,7 @@ void do_pattern_edit(void) {
       } else {
 	clear_note_leds();
 	clear_led_blink(LED_DONE);
+	clear_led_blink(LED_UP);
 	set_led(LED_DONE);
       }
     }
@@ -316,8 +333,12 @@ void do_pattern_edit(void) {
 	  clear_led(LED_ACCENT);
 	  clear_led(LED_SLIDE);
 	  set_led(LED_DONE);
+	  clear_led_blink(LED_DONE);
 	} else {
 	  clear_led(LED_DONE);
+	  if (dirtyflag)
+	    set_led_blink(LED_DONE);
+
 	  note_on(curr_note & 0x3F,
 		  curr_note >> 7,              // slide
 		  (curr_note>>6) & 0x1);       // accent
@@ -434,21 +455,24 @@ void start_runwrite_mode() {
   in_runwrite_mode = 1;
   set_led(LED_RS); 
   note_off(0);
-  //turn_on_tempo();
   while (note_counter & 0x1);  // wait for the tempo interrupt to be ready for a note-on
   play_loaded_pattern = 1;
+  playing = TRUE;
+  midi_putchar(MIDI_START);
 }
 
 void stop_runwrite_mode() {
   //putstring("stop runwrite\n\r");
-  //turn_off_tempo();
   play_loaded_pattern = 0;
   clear_key_leds();
   clear_bank_leds();
+  clear_blinking_leds();
   set_bank_led(bank);
   in_runwrite_mode = 0;
   clear_led(LED_RS);
   note_off(0);
+  playing = FALSE;
+  midi_putchar(MIDI_STOP);
 }
 
 void start_stepwrite_mode() {
@@ -457,7 +481,6 @@ void start_stepwrite_mode() {
   set_led(LED_NEXT); 
   clear_bank_leds();
   set_bank_led(0);
-  //turn_off_tempo();
   note_off(0);
 }
 
@@ -467,12 +490,9 @@ void stop_stepwrite_mode() {
   clear_led(LED_NEXT); 
   dirtyflag = 0;
   clear_led(LED_DONE);
-  clear_led_blink(LED_DONE);
+  clear_blinking_leds();
   clear_key_leds();
   clear_bank_leds();
   set_bank_led(bank);
-  /*  if (sync == INTERNAL_SYNC)
-    turn_on_tempo();
-  */
   note_off(0);
 }

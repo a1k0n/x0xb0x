@@ -170,6 +170,7 @@ void do_tempo(void) {
 	
       break;
 
+    case A_FUNC:
     case EDIT_PATTERN_FUNC: 
       if (play_loaded_pattern) {
         if (curr_note != 0xFF) {
@@ -342,6 +343,7 @@ void do_tempo(void) {
       }
       break;
       
+    case A_FUNC:
     case EDIT_PATTERN_FUNC: 
       if (play_loaded_pattern) {
 	// load up the next note
@@ -409,7 +411,7 @@ void do_tempo(void) {
   if (note_counter < 4) {
     set_led(LED_TEMPO);
     blink_leds_off();
-  }
+   }
   else if (note_counter < 8) {
     clear_led(LED_TEMPO);
     blink_leds_on();
@@ -429,6 +431,9 @@ volatile extern uint8_t debounce_timer;         // in switch.c
 volatile extern uint16_t tap_tempo_timer;        // in pattern_play.c
 volatile extern uint8_t last_dinsync_c;
 volatile extern int16_t dinsync_clocked, dinsync_clock_timeout;
+volatile extern uint16_t uart_timeout;
+
+volatile uint8_t blinktimer = 0;
 
 SIGNAL(SIG_OUTPUT_COMPARE0) {
   uint8_t curr_dinsync_c;
@@ -437,6 +442,8 @@ SIGNAL(SIG_OUTPUT_COMPARE0) {
     debounce_timer++;
   if (tap_tempo_timer != 0xFFFF)
     tap_tempo_timer++;
+  if (uart_timeout != 0xFFFF)
+    uart_timeout++;
 
   if (dinsync_clock_timeout != 0) {
     dinsync_clock_timeout--;
@@ -456,6 +463,18 @@ SIGNAL(SIG_OUTPUT_COMPARE0) {
     } else {
       last_dinsync_c = curr_dinsync_c;      
     }
+  }
+
+  if (! is_tempo_running()) {
+    if (blinktimer == 200) {
+      blinktimer = 0;
+      // turn off
+      blink_leds_off();
+    } else if (blinktimer == 100) {
+      // turn on
+      blink_leds_on();
+    }
+    blinktimer++;
   }
 }
 
@@ -821,9 +840,15 @@ void ioinit() {
   uint16_t baud = (F_CPU / (16 * UART_BAUDRATE)) - 1;
   
   /* setup the main UART */
-  UCSR1B |= (1<<RXEN1) | (1<<TXEN1) | (1<<RXCIE1);;    // read and write & intr
+  UCSR1B |= (1<<RXEN1) | (1<<TXEN1);    // read and write & intr
   UBRR1L = (uint8_t)baud;               // set baudrate
   UBRR1H = (uint8_t)(baud>>8);
+  // first flush the input
+  while (uart_getch()) {
+    uart_getchar();
+    delay_ms(10);
+  }
+  UCSR1B |= (1<<RXCIE1); // now turn on interrupts
 
   /* setup the MIDI UART */
   baud = (F_CPU / (16 * MIDI_BAUDRATE)) - 1;

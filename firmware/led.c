@@ -315,16 +315,18 @@ void clear_note_leds(void) {
 void set_note_led(uint8_t note) {
   int8_t shift;          // our octave shift
 
-  clear_note_leds();
-
   // if slide, turn on slide LED
   if (note>>7)
     set_key_led(KEY_SLIDE);
-  
+  else
+    clear_key_led(KEY_SLIDE);
+
   // if accent, turn on accent LED
   if ((note>>6) & 0x1) 
     set_key_led(KEY_ACCENT);
-  
+  else
+    clear_key_led(KEY_ACCENT);
+
   note &= 0x3F;
   if (note == 0) {
     shift = 0;
@@ -349,8 +351,14 @@ void set_note_led(uint8_t note) {
   // figure out what led to light
 
   if (note == REST) {
+    clear_notekey_leds();
     set_key_led(KEY_REST);
   } else {
+    clear_key_led(KEY_REST);
+    for (shift = C1; shift <= C2; shift++) {
+      if (shift != note)
+	clear_led(notekey_led_tab[shift - C1]);
+    }
     set_led(notekey_led_tab[note - C1]);
   }
 }
@@ -400,7 +408,7 @@ void display_octave_shift(int8_t shift) {
   } else {
     clear_led(LED_UP);
     clear_led_blink(LED_UP);
-
+    
     if (shift == 1) 
       set_led(LED_UP);
     else if (shift == -1)

@@ -56,7 +56,7 @@ uint8_t recv_msg_i=0;
 uint8_t valid_msg_in_q = 0;
 
 volatile uint8_t CTS = TRUE; // clear to send -- can receive data on uart
-
+volatile uint16_t uart_timeout = 0; // timeout for messages
 
 /* 
  * Taken from: 
@@ -106,9 +106,13 @@ SIGNAL(SIG_USART1_RECV) {
   uint16_t size;
   char c = UDR1;
 
-  //set_bank_led(15); clock_leds();
- 
   if (CTS) {
+    if (uart_timeout > 1000) {
+      clear_bank_leds();
+      clock_leds();
+      recv_msg_i = 0;  // start over... but don't send status!
+    }
+
     if (recv_msg_i < UART_BUFF_SIZE) {
       recv_msg_buff[recv_msg_i++] = c;    // place at end of q      
     } else {
@@ -121,6 +125,8 @@ SIGNAL(SIG_USART1_RECV) {
       recv_msg_i = 0;
       //set_bank_led(14); clock_leds();
     }
+
+    uart_timeout = 0;
     
     /* The header has been received.  Start grabbing the content
      * and the CRC. */
@@ -139,7 +145,6 @@ SIGNAL(SIG_USART1_RECV) {
 	  recv_msg_i = 0;
 	  send_status(0);
 	  // set_bank_led(13); clock_leds();   // CRC Error
-	  clear_bank_leds(); clock_leds();
 	  return;
 	}
 
@@ -149,8 +154,6 @@ SIGNAL(SIG_USART1_RECV) {
 
 	switch (cmd) {
 	case PING_MSG:
-	  //set_bank_led(2); clock_leds();
-	  //putstring("got ping\n\r");
 	  send_status(0x1);
 	  break;
 	  
@@ -177,7 +180,6 @@ SIGNAL(SIG_USART1_RECV) {
 	  uint8_t bank, patt, i;
 	  uint16_t addr;
 	
-	  //set_bank_led(3); clock_leds();
 	  if (recv_msg_buff[2] != RD_PATT_MSG_LEN) {
 	    send_status(0);
 	    break;
@@ -250,8 +252,6 @@ SIGNAL(SIG_USART1_RECV) {
     }
     
   }
-  
-  clear_bank_leds();
 }
 
 void send_msg(uint8_t *buff, uint16_t len) {

@@ -68,7 +68,7 @@ void do_keyboard_mode(void) {
   uint8_t i, last_bank;
   
   // turn tempo off!
-  turn_on_tempo();
+  turn_off_tempo();
   
   clear_bank_leds();
   last_bank = bank;
