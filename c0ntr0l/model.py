@@ -38,7 +38,7 @@ class Model:
         if os.name == 'posix':
             self.serialPorts = glob.glob('/dev/cu.*') + glob.glob('/dev/tts/ttyUSB*') + glob.glob('/dev/ttyUSB*')
         elif os.name == 'nt':
-            self.serialPorts = ['COM1', 'COM2', 'COM3', 'COM4']
+            self.serialPorts = ['COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'COM10']
 
         print "Found the following serial ports: "+str(self.serialPorts)
 

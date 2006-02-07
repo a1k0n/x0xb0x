@@ -24,7 +24,7 @@ SharpKeymapDict = { 'A' : 'A#',
                     'F' : 'F#',
                     'G' : 'G#'}
 
-EffectKeymapList =  ['A','S','U','D']
+EffectKeymapList =  ['A','S']
 
                  
 class PatternEditGrid(gridlib.Grid):
@@ -234,10 +234,10 @@ class PatternEditGrid(gridlib.Grid):
             #
             elif keyChar == 'A':
                 tempString = 'A'
-                if 'D' in currentEffectString:
-                    tempString = 'D' + tempString
-                if 'U' in currentEffectString:
-                    tempString = 'U' + tempString
+                #if 'D' in currentEffectString:
+                #    tempString = 'D' + tempString
+                #if 'U' in currentEffectString:
+                #    tempString = 'U' + tempString
                 if 'S' in currentEffectString:
                     tempString += 'S'
                 currentEffectString = tempString
@@ -246,14 +246,14 @@ class PatternEditGrid(gridlib.Grid):
             # The 'U' and 'D' effects are mutually exclusive, since one
             # means transpose up, and the other transpose down. 
             #
-            elif keyChar == 'U':
-                if 'D' in currentEffectString:
-                    currentEffectString = currentEffectString.replace('D','')
-                currentEffectString = keyChar + currentEffectString
-            elif keyChar == 'D':
-                if 'U' in currentEffectString:
-                    currentEffectString = currentEffectString.replace('U','')
-                currentEffectString = keyChar + currentEffectString
+            #elif keyChar == 'U':
+            #    if 'D' in currentEffectString:
+            #        currentEffectString = currentEffectString.replace('D','')
+            #    currentEffectString = keyChar + currentEffectString
+            #elif keyChar == 'D':
+            #    if 'U' in currentEffectString:
+            #        currentEffectString = currentEffectString.replace('U','')
+            #    currentEffectString = keyChar + currentEffectString
 
         self.SetCellValue(EFFECT_ROW, col, currentEffectString)
 

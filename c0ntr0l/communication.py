@@ -5,11 +5,7 @@ from binascii import b2a_hex
 from DataFidelity import crc8
 from Globals import *
 from pattern import Pattern
-
 import time
-
-
-
 
 #
 # Messages from the c0ntr0l software to the x0xb0x.
@@ -96,8 +92,7 @@ class DataLink:
     def sendPingMessage(self):
         self.s.flushInput()
         self.sendBasicPacket(PING_MSG)
-
-        packet = self.getBasicPacket(0)
+        packet = self.getBasicPacket()
         if packet.isCorrect:
             packet.printMe()
             print "PACKET OK!";
