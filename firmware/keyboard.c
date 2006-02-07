@@ -71,7 +71,10 @@ void do_keyboard_mode(void) {
   turn_off_tempo();
   
   clear_bank_leds();
+
+  read_switches();
   last_bank = bank;
+  has_bank_knob_changed(); // ignore startup change
 
   while (1) {
     read_switches();

@@ -184,9 +184,8 @@ void do_pattern_edit(void) {
       int8_t shift;
 
       index = curr_pattern_index;
-
       curr_note = pattern_buff[index] & 0x3F;
-      
+
       // dont accent or slide 'done' notes, duh!
       if (just_pressed(KEY_ACCENT) && (curr_note != 0x3F)) {
 	//putstring("accent ");
@@ -276,7 +275,7 @@ void do_pattern_edit(void) {
 
 	if (in_stepwrite_mode) 	 // restrike note
 	  note_on(curr_note & 0x3F,
-		  curr_note >> 7,              // slide
+		  0,              // no slide
 		  (curr_note>>6) & 0x1);       // accent
       }
 
@@ -297,9 +296,11 @@ void do_pattern_edit(void) {
 
     // if in step mode & they press 'next' or 'prev, then step fwd/back, otherwise start stepmode
     if (just_pressed(KEY_NEXT) || just_pressed(KEY_PREV)) {
+      uint8_t prev_note = curr_note;
+
       if (in_stepwrite_mode) {
 	// turn off the last note
-	note_off(0);
+	note_off((curr_note >> 7) & 0x1);
 	delay_ms(1);
 	//putstring("step");
 	if (just_pressed(KEY_NEXT)) { 
@@ -340,7 +341,7 @@ void do_pattern_edit(void) {
 	    set_led_blink(LED_DONE);
 
 	  note_on(curr_note & 0x3F,
-		  curr_note >> 7,              // slide
+		  prev_note >> 7,              // slide
 		  (curr_note>>6) & 0x1);       // accent
 	  
 	  set_note_led(curr_note);
@@ -353,7 +354,7 @@ void do_pattern_edit(void) {
 	curr_note = pattern_buff[curr_pattern_index];
 	if (curr_note != 0xFF) {
 	  note_on(curr_note & 0x3F,
-		  curr_note >> 7,              // slide
+		  0,              // no slide on first note
 		  (curr_note>>6) & 0x1);       // accent
 	  
 	  set_note_led(curr_note);

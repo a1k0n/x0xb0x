@@ -508,7 +508,6 @@ SIGNAL(SIG_PIN_CHANGE0) {
 
 ////////////////////////////////// main()
 int main(void) {
-
   ioinit();        // set up IO ports and the UART
 
   // start the tempo timer

@@ -40,6 +40,7 @@
 #include "main.h"
 #include "led.h"
 #include "dinsync.h"
+#include "delay.h"
 
 uint8_t midion_accent_velocity = 127;
 uint8_t midioff_velocity = 32;
@@ -118,7 +119,7 @@ void init_midi(void) {
 void do_midi_mode(void) {
   char c;
   uint8_t last_bank;
-  uint8_t cmd, note, velocity;
+  uint8_t note, velocity;
 
   // turn tempo off!
   turn_off_tempo();
@@ -127,8 +128,12 @@ void do_midi_mode(void) {
   clear_bank_leds();
   set_bank_led(midi_in_addr);
 
+  read_switches();
+  delay_ms(100);
+  read_switches();
+  delay_ms(100);
+  read_switches();
   last_bank = bank;
-
   prev_note = 255;        // no notes played yet
 
   while (1) {
@@ -138,7 +143,7 @@ void do_midi_mode(void) {
       return;
     }
 
-    if (has_bank_knob_changed()) {
+    if (last_bank != bank) {
       // bank knob was changed, change the midi address
       midi_in_addr = bank;
 
@@ -150,7 +155,6 @@ void do_midi_mode(void) {
 
       last_bank = bank;
     }
-
 
     // if theres a char waiting in midi queue...
     if (midi_getch()) {

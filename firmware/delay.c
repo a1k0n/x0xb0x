@@ -20,10 +20,12 @@ void delay_ms(unsigned char ms)
 }
 
 void delay_s(unsigned char s) {
-  delay_ms(250);
-  delay_ms(250);
-  delay_ms(250);
-  delay_ms(250);
+  while (s--) {
+    delay_ms(250);
+    delay_ms(250);
+    delay_ms(250);
+    delay_ms(250);
+  }
 }
 
 

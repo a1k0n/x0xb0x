@@ -82,8 +82,7 @@ const static uint8_t numkey_tab[8] = {
   KEY_C2
 };
 
-
-void read_switches() {
+void read_switches(void) {
   uint8_t i, s, l, t;
   uint8_t temp_switches[3];
   uint8_t keypress_switches[3];
