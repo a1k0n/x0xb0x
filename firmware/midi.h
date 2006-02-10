@@ -34,6 +34,7 @@
 #define _MIDI_H_
 
 // midi channel messages
+#define MIDI_IGNORE 0x0  // ignore running status
 #define MIDI_NOTE_ON 0x9
 #define MIDI_NOTE_OFF 0x8
 #define MIDI_PITCHBEND 0xE

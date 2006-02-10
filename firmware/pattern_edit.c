@@ -159,10 +159,8 @@ void do_pattern_edit(void) {
     // if syncing by MIDI, look for midi commands
     if (sync == MIDI_SYNC) {
       midi_cmd = midi_recv_cmd(); // returns 0 if no midi commands waiting
-    }
-
-    if ((sync == MIDI_SYNC) && (midi_cmd != 0)) {
-      putnum_uh(midi_cmd);
+      if (midi_cmd != 0)
+	putnum_uh(midi_cmd);
     }
 
     // if they hit run/stop, or on midi stop/start,
@@ -456,7 +454,8 @@ void start_runwrite_mode() {
   in_runwrite_mode = 1;
   set_led(LED_RS); 
   note_off(0);
-  while (note_counter & 0x1);  // wait for the tempo interrupt to be ready for a note-on
+  if (sync == INTERNAL_SYNC)
+    while (note_counter & 0x1);  // wait for the tempo interrupt to be ready for a note-on
   play_loaded_pattern = 1;
   playing = TRUE;
   midi_putchar(MIDI_START);

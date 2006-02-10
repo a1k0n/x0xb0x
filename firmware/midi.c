@@ -161,12 +161,14 @@ void do_midi_mode(void) {
       // if its a command & either for our address or 0xF,
       // set the midi_running_status
       c = midi_getchar();
+
       if (c >> 7) {       // if the top bit is high, this is a command
 	if ((c >> 4 == 0xF) ||    // universal cmd, no addressing
 	    ((c & 0xF) == midi_in_addr)) {  // matches our addr
 	  midi_running_status = c >> 4;
 	} else {
 	  // not for us, continue!
+	  midi_running_status = MIDI_IGNORE; 
 	  continue;
 	}
       } else {
@@ -174,6 +176,11 @@ void do_midi_mode(void) {
       }
 
       switch (midi_running_status) {
+      case MIDI_IGNORE:
+	{
+	  // somebody else's data, ignore
+	  break;
+	} 
       case MIDI_NOTE_ON:
 	{
 	  if (c >> 7)  // if the last byte was a command then we have to get the note

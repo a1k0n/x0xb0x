@@ -253,12 +253,12 @@ void do_tempo(void) {
 	if ((curr_pattern_index >= PATT_SIZE) || 
 	    (pattern_buff[curr_pattern_index] == END_OF_PATTERN)) {
 	  curr_pattern_index = 0;          // start next pattern in track
+	  curr_track_index++;      // go to next patt in chain
 
 	  // if this is the end of the track, go to the next one in the chain
 	  if ((curr_track_index >= TRACK_SIZE) ||
 	      (track_buff[curr_track_index] == END_OF_TRACK)) {
 	    curr_track_index = 0;
-
 	    curr_chain_index++;      // go to next track in chain
 	    // last pattern in this chain, go to next chain
 	    if ((curr_chain_index >= MAX_CHAIN) ||
@@ -286,8 +286,6 @@ void do_tempo(void) {
 	      curr_chain_index++;
 	    }
 	    load_track(curr_bank, curr_chain[curr_chain_index]);
-	  } else {
-	    curr_track_index++;
 	  }
 	  curr_patt = track_buff[curr_track_index];
 	  load_curr_patt();
@@ -401,7 +399,7 @@ void do_tempo(void) {
 		     ((curr_note>>6) & 0x1) | all_accent);       // accent
 	    midi_send_note_on(curr_note);
 	  }
-	}
+	} 
       }
       break;
     }
