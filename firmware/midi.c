@@ -171,8 +171,6 @@ void do_midi_mode(void) {
 	  midi_running_status = MIDI_IGNORE; 
 	  continue;
 	}
-      } else {
-	continue; // No MIDI data waiting (--Chairman Meow)
       }
 
       switch (midi_running_status) {
