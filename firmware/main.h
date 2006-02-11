@@ -81,6 +81,7 @@ uint8_t is_tempo_running(void);
 void init_tempo_detect(void);
 void init_tempo(void);
 void init_timer0(void);
+void init_timer2(void);
 
 void do_tempo(void);
 

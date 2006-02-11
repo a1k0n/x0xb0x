@@ -189,13 +189,26 @@ void do_tempo(void) {
     case PLAY_PATTERN_FUNC: 
       if (playing) {
 	if (curr_note != 0xFF) {
-	  // check if the note had slide on it 
-	  note_off(((curr_note>>7) & 0x1) | all_slide); // slide
+	  if (((curr_note>>7) & 0x1) | all_slide) { 
+	    // check if the note had slide on it 
+	    note_off(1); // slide
+	    // DONT send a midi note off
+	  } else {
+	    note_off(0); // no slide
+	    if ((curr_note & 0x3F) != 0)  // not rest
+	      midi_send_note_off(curr_note + curr_pitch_shift);
+	    else
+	      midi_send_note_off(curr_note);
+	  }
 	}
-	if ((curr_note & 0x3F) != 0)  // not rest
-	  midi_send_note_off(curr_note + curr_pitch_shift);
-	else
-	  midi_send_note_off(curr_note);
+	
+	if ( (prev_note != 0xFF) &&
+	     (((prev_note>>7) & 0x1) | all_slide ) ) {
+	  if ((prev_note & 0x3F) != 0)  // not rest
+	    midi_send_note_off(prev_note + curr_pitch_shift);
+	  else
+	    midi_send_note_off(prev_note);
+	}
 
 	// last note of this pattern?
 	if ((curr_pattern_index >= PATT_SIZE) || 
@@ -239,15 +252,19 @@ void do_tempo(void) {
     case PLAY_TRACK_FUNC: 
       if (playing) {
 	if (curr_note != 0xFF) {
-	  // check if the note had slide on it 
-	  note_off(((curr_note>>7) & 0x1) | all_slide); // slide
+	  if (((curr_note>>7) & 0x1) | all_slide) { 
+	    // check if the note had slide on it 
+	    note_off(1); // slide
+	    // DONT send a midi note off
+	  } else {
+	    note_off(0); // no slide
+	    if ((curr_note & 0x3F) != 0)  // not rest
+	      midi_send_note_off(curr_note + curr_pitch_shift
+				 + get_pitchshift_from_patt(curr_patt));
+	    else
+	      midi_send_note_off(curr_note);
+	  }
 	}
-	if ((curr_note & 0x3F) != 0)  // not rest
-	  midi_send_note_off(curr_note + 
-			     curr_pitch_shift + 
-			     get_pitchshift_from_patt(curr_patt));
-	else
-	  midi_send_note_off(curr_note);
 
 	// if this is the last note in the pattern, go to the next in track
 	if ((curr_pattern_index >= PATT_SIZE) || 
@@ -514,6 +531,9 @@ int main(void) {
   // start the 'rtc' timer0
   init_timer0();
 
+  // start the 'dinsync' timer2
+  //init_timer2();
+
   rand = tempo;            // stupid initialization, do better?
 
   dinsync_set_out(); // output DINSYNC
@@ -622,6 +642,13 @@ void init_timer0(void) {
   sbi(TIMSK, 0);          // timer0 overflow interrupt enable
   TCCR0 = (1 << WGM01) | 0x3;            // compare mode, clk/64
   OCR0 = 250;             // 1KHz
+}
+
+void init_timer2(void) {
+  sbi(TIMSK, 0);
+  TCCR2 = (1<<WGM21) | 0x3; // compare mode, clk/32
+  OCR2 = 50;             // 10khz
+
 }
 
 void init_tempo(void) {
