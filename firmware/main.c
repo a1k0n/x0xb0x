@@ -271,36 +271,52 @@ void do_tempo(void) {
 	    (pattern_buff[curr_pattern_index] == END_OF_PATTERN)) {
 	  curr_pattern_index = 0;          // start next pattern in track
 	  curr_track_index++;      // go to next patt in chain
-
+	  /*
+	  putstring("Next Pattern in track #"); putnum_ud(curr_track_index);
+	  putstring(" = 0x"); putnum_ud(track_buff[curr_track_index]);
+	  putstring("\n\r");
+	  */
 	  // if this is the end of the track, go to the next one in the chain
 	  if ((curr_track_index >= TRACK_SIZE) ||
 	      (track_buff[curr_track_index] == END_OF_TRACK)) {
 	    curr_track_index = 0;
 	    curr_chain_index++;      // go to next track in chain
+	    /*
+	    putstring("Next track in chain #"); putnum_ud(curr_chain_index);
+	    putstring(" = 0x"); putnum_ud(curr_chain[curr_chain_index]);
+	    putstring("\n\r");
+	    
+	    putstring("curr chain = ");
+	    for (i=0; i<MAX_CHAIN; i++) {
+	      if (curr_chain[i] >= 8)
+		break;
+	      putnum_ud(curr_chain[i]);
+	      uart_putchar(' ');
+	    }
+	    putstring("\n\r");
+	    */
 	    // last pattern in this chain, go to next chain
 	    if ((curr_chain_index >= MAX_CHAIN) ||
 		(curr_chain[curr_chain_index] == 0xFF)) {
 	      curr_chain_index = 0;
-		
+	      
 	      if (!chains_equiv(next_chain, curr_chain) ||
 		  (curr_bank != next_bank)) {
 		
 		// copy next pattern chain into current pattern chain
 		for (i=0; i<MAX_CHAIN; i++) 
 		  curr_chain[i] = next_chain[i];
-
+		
 		// reset the pitch
 		next_pitch_shift = curr_pitch_shift = 0;
-
+		
 		clear_notekey_leds();
 		clear_blinking_leds();
 	      }
 	      //putnum_ud(next_pitch_shift);
 	      curr_bank = next_bank;
 	      curr_pitch_shift = next_pitch_shift;
-
-	    } else {
-	      curr_chain_index++;
+	      
 	    }
 	    load_track(curr_bank, curr_chain[curr_chain_index]);
 	  }

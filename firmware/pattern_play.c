@@ -171,9 +171,19 @@ void do_patterntrack_play(void) {
 
     // releasing the chain key 'finalizes' the chain buffer
     if (just_released(KEY_CHAIN)) {
-      for (i=0; i<MAX_CHAIN; i++)
+      /*
+	putstring("buff'd chain = ");
+	for (i=0; i<MAX_CHAIN; i++) {
+	  if (buff_chain[i] >= 8)
+	    break;
+	  putnum_ud(buff_chain[i]);
+	  uart_putchar(' ');
+	}
+	putstring("\n\r");
+      */
+      for (i=0; i<MAX_CHAIN; i++) {
 	next_chain[i] = buff_chain[i];
-
+      }
       // if we're not playing something right now, curr = next
       if (!playing) {
 	for (i=0; i<MAX_CHAIN; i++)
@@ -198,16 +208,20 @@ void do_patterntrack_play(void) {
       if ((i != 0) && (buff_chain_len < MAX_CHAIN)) {
 	buff_chain[buff_chain_len++] = i - 1;
 	buff_chain[buff_chain_len] = 0xFF;
-
 	/*
-	putstring("buffered pattern chain = ");
-	for (i=0; i<MAX_PATT_CHAIN; i++) {
-	  if (buff_pattern_chain[i] >= 8)
-	    break;
-	  putnum_ud(buff_pattern_chain[i]);
+	  putstring("adding: ");
+	  putnum_uh(buff_chain[buff_chain_len-1]);
+	  putstring("\n\r");
+	*/
+	/*
+	  putstring("buff'd chain = ");
+	  for (i=0; i<MAX_CHAIN; i++) {
+	  if (buff_chain[i] >= 8)
+	  break;
+	  putnum_ud(buff_chain[i]);
 	  uart_putchar(' ');
-	}
-	putstring("\n\r");
+	  }
+	  putstring("\n\r");
 	*/
 
       }
