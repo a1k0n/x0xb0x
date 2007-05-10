@@ -479,7 +479,7 @@ SIGNAL(SIG_OUTPUT_COMPARE0) {
   if (uart_timeout != 0xFFFF)
     uart_timeout++;
 
-  if ((sync==MIDI_SYNC) && (dinsync_clock_timeout != 0)) {
+  if ((sync!=DIN_SYNC) && (dinsync_clock_timeout != 0)) {
     dinsync_clock_timeout--;
     if (dinsync_clock_timeout == 0) {
       cbi(DINSYNC_PORT, DINSYNC_CLK);    // lower the clock
