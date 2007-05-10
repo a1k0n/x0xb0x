@@ -39,11 +39,11 @@
 // counter: counts up DINSYNC_PPM per beat, for dinsync out
 volatile uint8_t dinsync_counter = 0;   
 // clocked: keeps track of input dinsync pulses
-volatile uint8_t dinsync_clocked = 0;
+volatile int16_t dinsync_clocked = 0;
 
 // when doing midi sync to dinsync conversion, this is the timeout
 // to dropping the clock after a MIDICLOCK message
-volatile uint8_t dinsync_clock_timeout = 0;
+volatile int16_t dinsync_clock_timeout = 0;
 
 // these variables keep track of the dinsync pin states for dinsync in
 uint8_t last_dinsync_start = 0;

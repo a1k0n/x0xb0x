@@ -107,8 +107,7 @@ void do_tempo(void) {
   cli();
 
   // if the sync is internal or whatever, we have to generate dinsync/midisync msgs
-  if ((sync != MIDI_SYNC) && (sync != DIN_SYNC) &&  
-      (function != KEYBOARD_MODE_FUNC)) {
+  if ((sync != MIDI_SYNC) && (sync != DIN_SYNC) && (function != KEYBOARD_MODE_FUNC)) {
     if (dinsync_counter >= DINSYNC_PPQ/4)
       dinsync_counter = 0;
 
@@ -126,10 +125,16 @@ void do_tempo(void) {
       dinsync_counter++;
       sei();
       return;
+    } 
+    else {
+      dinsync_counter++;
     }
-    dinsync_counter++;
   }
-
+	
+  // reset note counter
+  if( note_counter >= 8 )
+    note_counter = 0;
+  
   if (note_counter & 0x1) {       // sixteenth notes
     switch(function) {
     case RANDOM_MODE_FUNC:
@@ -451,8 +456,6 @@ void do_tempo(void) {
   clock_leds();
 
   note_counter++;
-  if (note_counter >= 8)
-    note_counter = 0;
 
   sei();
 }
@@ -476,7 +479,7 @@ SIGNAL(SIG_OUTPUT_COMPARE0) {
   if (uart_timeout != 0xFFFF)
     uart_timeout++;
 
-  if (dinsync_clock_timeout != 0) {
+  if ((sync==MIDI_SYNC) && (dinsync_clock_timeout != 0)) {
     dinsync_clock_timeout--;
     if (dinsync_clock_timeout == 0) {
       cbi(DINSYNC_PORT, DINSYNC_CLK);    // lower the clock
