@@ -97,15 +97,15 @@ void do_patterntrack_play(void) {
 
   curr_function = function;
 
-  if (sync == INTERNAL_SYNC)
+  if (sync == INTERNAL_SYNC) {
     turn_on_tempo();
-  else {
+  } else {
     turn_off_tempo();
-    if (sync == DIN_SYNC) {
-      dinsync_set_in();
-    } else {
-      dinsync_set_out();
-    }
+  } 
+  if (sync == DIN_SYNC) {
+    dinsync_set_in();
+  } else {
+    dinsync_set_out();
   }
 
   clear_all_leds();
